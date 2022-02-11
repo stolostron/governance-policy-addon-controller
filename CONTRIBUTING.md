@@ -48,6 +48,7 @@ Anyone can comment on issues and submit reviews for pull requests. In order to b
 Before submitting a PR, please perform the following steps:
 
 ```shell
-make check
 make test
 ```
+
+It is a good idea to go through the "KinD tests" github workflow locally if possible, to more thoroughly test any changes.
