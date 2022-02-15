@@ -3,7 +3,9 @@ package addon
 import (
 	"context"
 	"embed"
+	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/openshift/library-go/pkg/assets"
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
@@ -98,10 +100,44 @@ func GetAndAddAgent(
 		return fmt.Errorf("failed getting the %v agent addon: %w", addonName, err)
 	}
 
+	if os.Getenv("SIMULATION_MODE") == "on" {
+		agentAddon = &SimulationAgent{a: agentAddon}
+	}
+
 	err = mgr.AddAgent(agentAddon)
 	if err != nil {
 		return fmt.Errorf("failed adding the %v agent addon to the manager: %w", addonName, err)
 	}
 
 	return nil
+}
+
+type SimulationAgent struct {
+	a agent.AgentAddon
+}
+
+func (sim *SimulationAgent) Manifests(cluster *clusterv1.ManagedCluster, addon *addonapiv1alpha1.ManagedClusterAddOn) ([]runtime.Object, error) {
+	realObjs, err := sim.a.Manifests(cluster, addon)
+
+	fmt.Println("Simulation Agent Manifests:")
+	for _, obj := range realObjs {
+		b, err := json.Marshal(obj)
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Println(string(b))
+	}
+
+	return []runtime.Object{}, err
+}
+
+func (sim *SimulationAgent) GetAgentAddonOptions() agent.AgentAddonOptions {
+	opts := sim.a.GetAgentAddonOptions()
+
+	opts.Registration.PermissionConfig = func(cluster *clusterv1.ManagedCluster, addon *addonapiv1alpha1.ManagedClusterAddOn) error {
+		fmt.Println("Simulation Agent permission config skipped")
+		return nil
+	}
+
+	return opts
 }
