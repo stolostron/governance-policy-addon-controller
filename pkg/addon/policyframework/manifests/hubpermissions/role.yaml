@@ -49,3 +49,14 @@ rules:
   - get
   - patch
   - update
+# Rule for secret-sync
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  resourceNames:
+  - policy-encryption-key
+  verbs:
+  - get
+  - list
+  - watch
