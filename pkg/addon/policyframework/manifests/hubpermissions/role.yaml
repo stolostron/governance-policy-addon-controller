@@ -9,7 +9,7 @@ rules:
   resources:
   - leases
   resourceNames:
-  - policy-framework
+  - governance-policy-framework
   verbs:
   - get
   - list
