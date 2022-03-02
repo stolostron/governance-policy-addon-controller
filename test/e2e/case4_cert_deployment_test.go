@@ -31,9 +31,8 @@ var _ = Describe("Test cert policy controller deployment", func() {
 	It("should show the cert-policy-controller managedclusteraddon as available", func() {
 		Eventually(func() bool {
 			addon := GetWithTimeout(clientDynamic, gvrManagedClusterAddOn, case4DeploymentName, "cluster1", true, 30)
-			status := addon.Object["status"]
 
-			return getAddonStatus(status)
+			return getAddonStatus(addon)
 		}, 240, 1).Should(Equal(true))
 	})
 	It("should delete the cert-policy-controller deployment when the ManagedClusterAddOn CR is removed", func() {

@@ -42,10 +42,11 @@ var _ = Describe("Test config policy controller deployment", func() {
 	})
 	It("should show the config-policy-controller managedclusteraddon as available", func() {
 		Eventually(func() bool {
-			addon := GetWithTimeout(clientDynamic, gvrManagedClusterAddOn, case2ConfigDeploymentName, "cluster1", true, 30)
-			status := addon.Object["status"]
+			addon := GetWithTimeout(
+				clientDynamic, gvrManagedClusterAddOn, case2ConfigDeploymentName, "cluster1", true, 30,
+			)
 
-			return getAddonStatus(status)
+			return getAddonStatus(addon)
 		}, 240, 1).Should(Equal(true))
 	})
 	It("should remove the config policy controller deployment when the ManagedClusterAddOn CR is removed", func() {

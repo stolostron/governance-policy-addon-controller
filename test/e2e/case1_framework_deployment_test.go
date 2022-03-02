@@ -43,10 +43,11 @@ var _ = Describe("Test framework deployment", func() {
 	})
 	It("should show the framework managedclusteraddon as available", func() {
 		Eventually(func() bool {
-			addon := GetWithTimeout(clientDynamic, gvrManagedClusterAddOn, case1FrameworkDeploymentName, "cluster1", true, 30)
-			status := addon.Object["status"]
+			addon := GetWithTimeout(
+				clientDynamic, gvrManagedClusterAddOn, case1FrameworkDeploymentName, "cluster1", true, 30,
+			)
 
-			return getAddonStatus(status)
+			return getAddonStatus(addon)
 		}, 240, 1).Should(Equal(true))
 	})
 	It("should remove the framework deployment when the ManagedClusterAddOn CR is removed", func() {
@@ -75,10 +76,11 @@ var _ = Describe("Test framework deployment", func() {
 
 		By("showing the framework managedclusteraddon as available")
 		Eventually(func() bool {
-			addon := GetWithTimeout(clientDynamic, gvrManagedClusterAddOn, case1FrameworkDeploymentName, "cluster1", true, 30)
-			status := addon.Object["status"]
+			addon := GetWithTimeout(
+				clientDynamic, gvrManagedClusterAddOn, case1FrameworkDeploymentName, "cluster1", true, 30,
+			)
 
-			return getAddonStatus(status)
+			return getAddonStatus(addon)
 		}, 240, 1).Should(Equal(true))
 
 		By("deleting the managedclusteraddon")
@@ -107,10 +109,11 @@ var _ = Describe("Test framework deployment", func() {
 
 		By("showing the framework managedclusteraddon as available")
 		Eventually(func() bool {
-			addon := GetWithTimeout(clientDynamic, gvrManagedClusterAddOn, case1FrameworkDeploymentName, "cluster1", true, 30)
-			status := addon.Object["status"]
+			addon := GetWithTimeout(
+				clientDynamic, gvrManagedClusterAddOn, case1FrameworkDeploymentName, "cluster1", true, 30,
+			)
 
-			return getAddonStatus(status)
+			return getAddonStatus(addon)
 		}, 240, 1).Should(Equal(true))
 
 		By("deleting the managedclusteraddon")

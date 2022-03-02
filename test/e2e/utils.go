@@ -106,14 +106,23 @@ func ListWithTimeoutByNamespace(
 	return nil
 }
 
-func getAddonStatus(status interface{}) bool {
-	conditions := status.(map[string]interface{})["conditions"]
-	conditionsArray := conditions.([]interface{})
-	for _, item := range conditionsArray {
-		condition := item.(map[string]interface{})
-		if condition["type"] == "Available" {
+func getAddonStatus(addon *unstructured.Unstructured) bool {
+	conditions, found, err := unstructured.NestedSlice(addon.Object, "status", "conditions")
+	if err != nil {
+		panic(err)
+	}
+
+	if !found {
+		return false
+	}
+
+	for _, item := range conditions {
+		if condition, ok := item.(map[string]interface{}); !ok {
+			panic(fmt.Errorf("failed to parse .status.condition[]: %+v", item))
+		} else if condition["type"] == "Available" {
 			return condition["status"] == "True"
 		}
 	}
+
 	return false
 }
