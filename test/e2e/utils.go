@@ -105,3 +105,15 @@ func ListWithTimeoutByNamespace(
 
 	return nil
 }
+
+func getAddonStatus(status interface{}) bool {
+	conditions := status.(map[string]interface{})["conditions"]
+	conditionsArray := conditions.([]interface{})
+	for _, item := range conditionsArray {
+		condition := item.(map[string]interface{})
+		if condition["type"] == "Available" {
+			return condition["status"] == "True"
+		}
+	}
+	return false
+}

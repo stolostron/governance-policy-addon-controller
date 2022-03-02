@@ -28,6 +28,14 @@ var _ = Describe("Test iam policy controller deployment", func() {
 			return (availableReplicas != nil) && replicas.(int64) == availableReplicas.(int64)
 		}, 240, 1).Should(Equal(true))
 	})
+	It("should show the iam-policy-controller managedclusteraddon as available", func() {
+		Eventually(func() bool {
+			addon := GetWithTimeout(clientDynamic, gvrManagedClusterAddOn, case3DeploymentName, "cluster1", true, 30)
+			status := addon.Object["status"]
+
+			return getAddonStatus(status)
+		}, 240, 1).Should(Equal(true))
+	})
 	It("should delete the iam-policy-controller deployment when the ManagedClusterAddOn CR is removed", func() {
 		Kubectl("delete", "-f", case3ManagedClusterAddOnCR)
 		deploy := GetWithTimeout(clientDynamic, gvrDeployment, case3DeploymentName, addonNamespace, false, 30)

@@ -22,9 +22,10 @@ const (
 )
 
 var (
-	gvrDeployment schema.GroupVersionResource
-	gvrPod        schema.GroupVersionResource
-	clientDynamic dynamic.Interface
+	gvrDeployment          schema.GroupVersionResource
+	gvrPod                 schema.GroupVersionResource
+	gvrManagedClusterAddOn schema.GroupVersionResource
+	clientDynamic          dynamic.Interface
 )
 
 func TestE2e(t *testing.T) {
@@ -35,6 +36,7 @@ func TestE2e(t *testing.T) {
 var _ = BeforeSuite(func() {
 	gvrDeployment = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "deployments"}
 	gvrPod = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
+	gvrManagedClusterAddOn = schema.GroupVersionResource{Group: "addon.open-cluster-management.io", Version: "v1alpha1", Resource: "managedclusteraddons"}
 	clientDynamic = NewKubeClientDynamic("", "../../policy-addon-ctrl.kubeconfig", "")
 })
 
