@@ -3,7 +3,6 @@ package addon
 import (
 	"context"
 	"embed"
-	"encoding/json"
 	"fmt"
 	"os"
 
@@ -53,7 +52,8 @@ func NewRegistrationOption(
 	filesystem embed.FS,
 ) *agent.RegistrationOption {
 	applyManifestFromFile := func(file, clusterName string,
-		kubeclient *kubernetes.Clientset, recorder events.Recorder) error {
+		kubeclient *kubernetes.Clientset, recorder events.Recorder,
+	) error {
 		groups := agent.DefaultGroups(clusterName, addonName)
 		config := struct {
 			ClusterName string
@@ -121,49 +121,10 @@ func GetAndAddAgent(
 		return fmt.Errorf("failed getting the %v agent addon: %w", addonName, err)
 	}
 
-	if os.Getenv("SIMULATION_MODE") == "on" {
-		agentAddon = &SimulationAgent{a: agentAddon}
-	}
-
 	err = mgr.AddAgent(agentAddon)
 	if err != nil {
 		return fmt.Errorf("failed adding the %v agent addon to the manager: %w", addonName, err)
 	}
 
 	return nil
-}
-
-type SimulationAgent struct {
-	a agent.AgentAddon
-}
-
-func (sim *SimulationAgent) Manifests(cluster *clusterv1.ManagedCluster,
-	addon *addonapiv1alpha1.ManagedClusterAddOn) ([]runtime.Object, error) {
-	realObjs, err := sim.a.Manifests(cluster, addon)
-
-	log.Info("Simulation Agent Manifests:")
-
-	for _, obj := range realObjs {
-		b, err := json.Marshal(obj)
-		if err != nil {
-			log.Error(err, "Failed to marshal object")
-		}
-
-		log.Info("Mashalling was successful", string(b))
-	}
-
-	return []runtime.Object{}, err
-}
-
-func (sim *SimulationAgent) GetAgentAddonOptions() agent.AgentAddonOptions {
-	opts := sim.a.GetAgentAddonOptions()
-
-	opts.Registration.PermissionConfig = func(cluster *clusterv1.ManagedCluster,
-		addon *addonapiv1alpha1.ManagedClusterAddOn) error {
-		log.Info("Simulation Agent permission config skipped")
-
-		return nil
-	}
-
-	return opts
 }
