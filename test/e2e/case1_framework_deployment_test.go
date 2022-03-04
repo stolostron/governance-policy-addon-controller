@@ -16,7 +16,7 @@ const (
 
 var _ = Describe("Test framework deployment", func() {
 	It("should create the default framework deployment on the managed cluster", func() {
-		Kubectl("apply", "-f", case1ManagedClusterAddOnCR)
+		Kubectl("apply", "-n", "cluster1", "-f", case1ManagedClusterAddOnCR)
 		deploy := GetWithTimeout(clientDynamic, gvrDeployment, case1FrameworkDeploymentName, addonNamespace, true, 30)
 		Expect(deploy).NotTo(BeNil())
 
@@ -51,18 +51,18 @@ var _ = Describe("Test framework deployment", func() {
 		}, 240, 1).Should(Equal(true))
 	})
 	It("should remove the framework deployment when the ManagedClusterAddOn CR is removed", func() {
-		Kubectl("delete", "-f", case1ManagedClusterAddOnCR)
+		Kubectl("delete", "-n", "cluster1", "-f", case1ManagedClusterAddOnCR)
 		deploy := GetWithTimeout(clientDynamic, gvrDeployment, case1FrameworkDeploymentName, addonNamespace, false, 30)
 		Expect(deploy).To(BeNil())
 	})
 	It("should deploy with 2 containers if onManagedClusterHub is set in helm values annotation", func() {
 		By("deploying the default framework managedclusteraddon")
-		Kubectl("apply", "-f", case1ManagedClusterAddOnCR)
+		Kubectl("apply", "-n", "cluster1", "-f", case1ManagedClusterAddOnCR)
 		deploy := GetWithTimeout(clientDynamic, gvrDeployment, case1FrameworkDeploymentName, addonNamespace, true, 30)
 		Expect(deploy).NotTo(BeNil())
 
 		By("annotating the framework managedclusteraddon with helm values")
-		Kubectl("annotate", "-f", case1ManagedClusterAddOnCR,
+		Kubectl("annotate", "-n", "cluster1", "-f", case1ManagedClusterAddOnCR,
 			"addon.open-cluster-management.io/values={\"onMulticlusterHub\":true}")
 
 		Eventually(func() int {
@@ -84,18 +84,18 @@ var _ = Describe("Test framework deployment", func() {
 		}, 240, 1).Should(Equal(true))
 
 		By("deleting the managedclusteraddon")
-		Kubectl("delete", "-f", case1ManagedClusterAddOnCR)
+		Kubectl("delete", "-n", "cluster1", "-f", case1ManagedClusterAddOnCR)
 		deploy = GetWithTimeout(clientDynamic, gvrDeployment, case1FrameworkDeploymentName, addonNamespace, false, 30)
 		Expect(deploy).To(BeNil())
 	})
 	It("should deploy with 2 containers if onManagedClusterHub is set in the custom annotation", func() {
 		By("deploying the default framework managedclusteraddon")
-		Kubectl("apply", "-f", case1ManagedClusterAddOnCR)
+		Kubectl("apply", "-n", "cluster1", "-f", case1ManagedClusterAddOnCR)
 		deploy := GetWithTimeout(clientDynamic, gvrDeployment, case1FrameworkDeploymentName, addonNamespace, true, 30)
 		Expect(deploy).NotTo(BeNil())
 
 		By("annotating the framework managedclusteraddon with helm values")
-		Kubectl("annotate", "-f", case1ManagedClusterAddOnCR,
+		Kubectl("annotate", "-n", "cluster1", "-f", case1ManagedClusterAddOnCR,
 			"addon.open-cluster-management.io/on-multicluster-hub=true")
 
 		Eventually(func() int {
@@ -117,7 +117,7 @@ var _ = Describe("Test framework deployment", func() {
 		}, 240, 1).Should(Equal(true))
 
 		By("deleting the managedclusteraddon")
-		Kubectl("delete", "-f", case1ManagedClusterAddOnCR)
+		Kubectl("delete", "-n", "cluster1", "-f", case1ManagedClusterAddOnCR)
 		deploy = GetWithTimeout(clientDynamic, gvrDeployment, case1FrameworkDeploymentName, addonNamespace, false, 30)
 		Expect(deploy).To(BeNil())
 	})

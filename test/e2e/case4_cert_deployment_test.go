@@ -14,7 +14,7 @@ const (
 
 var _ = Describe("Test cert policy controller deployment", func() {
 	It("should create the cert-policy-controller deployment on the managed cluster", func() {
-		Kubectl("apply", "-f", case4ManagedClusterAddOnCR)
+		Kubectl("apply", "-n", "cluster1", "-f", case4ManagedClusterAddOnCR)
 		deploy := GetWithTimeout(clientDynamic, gvrDeployment, case4DeploymentName, addonNamespace, true, 30)
 		Expect(deploy).NotTo(BeNil())
 	})
@@ -36,7 +36,7 @@ var _ = Describe("Test cert policy controller deployment", func() {
 		}, 240, 1).Should(Equal(true))
 	})
 	It("should delete the cert-policy-controller deployment when the ManagedClusterAddOn CR is removed", func() {
-		Kubectl("delete", "-f", case4ManagedClusterAddOnCR)
+		Kubectl("delete", "-n", "cluster1", "-f", case4ManagedClusterAddOnCR)
 		deploy := GetWithTimeout(clientDynamic, gvrDeployment, case4DeploymentName, addonNamespace, false, 30)
 		Expect(deploy).To(BeNil())
 	})

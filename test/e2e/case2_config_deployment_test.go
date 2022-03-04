@@ -16,7 +16,7 @@ const (
 
 var _ = Describe("Test config policy controller deployment", func() {
 	It("should create the default config policy controller deployment on the managed cluster", func() {
-		Kubectl("apply", "-f", case2ManagedClusterAddOnCR)
+		Kubectl("apply", "-n", "cluster1", "-f", case2ManagedClusterAddOnCR)
 		deploy := GetWithTimeout(clientDynamic, gvrDeployment, case2ConfigDeploymentName, addonNamespace, true, 30)
 		Expect(deploy).NotTo(BeNil())
 
@@ -50,7 +50,7 @@ var _ = Describe("Test config policy controller deployment", func() {
 		}, 240, 1).Should(Equal(true))
 	})
 	It("should remove the config policy controller deployment when the ManagedClusterAddOn CR is removed", func() {
-		Kubectl("delete", "-f", case2ManagedClusterAddOnCR)
+		Kubectl("delete", "-n", "cluster1", "-f", case2ManagedClusterAddOnCR)
 		deploy := GetWithTimeout(clientDynamic, gvrDeployment, case2ConfigDeploymentName, addonNamespace, false, 30)
 		Expect(deploy).To(BeNil())
 	})
