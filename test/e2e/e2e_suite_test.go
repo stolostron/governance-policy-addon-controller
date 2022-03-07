@@ -65,11 +65,13 @@ func getManagedClusters(client dynamic.Interface) []managedClusterConfig {
 	}
 
 	var clusters []managedClusterConfig
+
 	for i, cluster := range clusterObjs.Items {
 		clusterName, _, err := unstructured.NestedString(cluster.Object, "metadata", "name")
 		if err != nil {
 			panic(err)
 		}
+
 		clusterClient := NewKubeClientDynamic("", fmt.Sprintf("%s%d.kubeconfig", kubeconfigFilename, i+1), "")
 
 		var clusterType string
