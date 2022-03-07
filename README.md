@@ -88,6 +88,9 @@ starting a kind cluster, installing the
 [registration-operator](https://github.com/open-cluster-management-io/registration-operator), and
 importing a cluster.
 
+Alternatively, you can run `./build/manage-clusters.sh` to deploy a hub and a configurable number of
+managed clusters (defaults to one) using Kind.
+
 Before the addons can be successfully distributed to the managed cluster, the work-agent must be
 started. This usually happens automatically within 5 minutes of importing the managed cluster, and
 can be waited for programmatically with the `wait-for-work-agent` make target.
