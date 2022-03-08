@@ -23,6 +23,8 @@ import (
 
 var log = ctrl.Log.WithName("common")
 
+const PolicyAddonPauseAnnotation = "policy-addon-pause"
+
 type GlobalValues struct {
 	ImagePullPolicy string            `json:"imagePullPolicy,"`
 	ImagePullSecret string            `json:"imagePullSecret"`
@@ -121,10 +123,28 @@ func GetAndAddAgent(
 		return fmt.Errorf("failed getting the %v agent addon: %w", addonName, err)
 	}
 
+	agentAddon = &PolicyAgentAddon{agentAddon}
+
 	err = mgr.AddAgent(agentAddon)
 	if err != nil {
 		return fmt.Errorf("failed adding the %v agent addon to the manager: %w", addonName, err)
 	}
 
 	return nil
+}
+
+// PolicyAgentAddon wraps the AgentAddon created from the addonfactory to override some behavior
+type PolicyAgentAddon struct {
+	agent.AgentAddon
+}
+
+func (pa *PolicyAgentAddon) Manifests(cluster *clusterv1.ManagedCluster,
+	addon *addonapiv1alpha1.ManagedClusterAddOn,
+) ([]runtime.Object, error) {
+	pauseAnnotation := addon.GetAnnotations()[PolicyAddonPauseAnnotation]
+	if pauseAnnotation == "true" {
+		return []runtime.Object{}, nil
+	}
+
+	return pa.AgentAddon.Manifests(cluster, addon)
 }
