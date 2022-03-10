@@ -17,16 +17,15 @@ const (
 var _ = Describe("Test iam-policy-controller deployment", func() {
 	It("should create the iam-policy-controller deployment on the managed cluster", func() {
 		for _, cluster := range managedClusterList {
-			By(cluster.clusterType + " " + cluster.clusterName +
-				": deploying the default iam-policy-controller managedclusteraddon")
+			logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
+			By(logPrefix + "deploying the default iam-policy-controller managedclusteraddon")
 			Kubectl("apply", "-n", cluster.clusterName, "-f", case3ManagedClusterAddOnCR)
 			deploy := GetWithTimeout(
 				cluster.clusterClient, gvrDeployment, case3DeploymentName, addonNamespace, true, 30,
 			)
 			Expect(deploy).NotTo(BeNil())
 
-			By(cluster.clusterType + " " + cluster.clusterName +
-				": checking the number of containers in the deployment")
+			By(logPrefix + "checking the number of containers in the deployment")
 			Eventually(func() int {
 				deploy = GetWithTimeout(
 					cluster.clusterClient, gvrDeployment, case3DeploymentName, addonNamespace, true, 30,
@@ -37,8 +36,7 @@ var _ = Describe("Test iam-policy-controller deployment", func() {
 				return len(containers.([]interface{}))
 			}, 60, 1).Should(Equal(1))
 
-			By(cluster.clusterType + " " + cluster.clusterName +
-				": verifying all replicas in iam-policy-controller deployment are available")
+			By(logPrefix + "verifying all replicas in iam-policy-controller deployment are available")
 			Eventually(func() bool {
 				deploy = GetWithTimeout(
 					cluster.clusterClient, gvrDeployment, case3DeploymentName, addonNamespace, true, 30,
@@ -50,8 +48,7 @@ var _ = Describe("Test iam-policy-controller deployment", func() {
 				return (availableReplicas != nil) && replicas.(int64) == availableReplicas.(int64)
 			}, 240, 1).Should(Equal(true))
 
-			By(cluster.clusterType + " " + cluster.clusterName +
-				": verifying a running iam-policy-controller pod")
+			By(logPrefix + "verifying a running iam-policy-controller pod")
 			Eventually(func() bool {
 				opts := metav1.ListOptions{
 					LabelSelector: case3PodSelector,
@@ -62,8 +59,7 @@ var _ = Describe("Test iam-policy-controller deployment", func() {
 				return phase.(string) == "Running"
 			}, 60, 1).Should(Equal(true))
 
-			By(cluster.clusterType + " " + cluster.clusterName +
-				": showing the iam-policy-controller managedclusteraddon as available")
+			By(logPrefix + "showing the iam-policy-controller managedclusteraddon as available")
 			Eventually(func() bool {
 				addon := GetWithTimeout(
 					clientDynamic, gvrManagedClusterAddOn, case3DeploymentName, cluster.clusterName, true, 30,
@@ -72,8 +68,7 @@ var _ = Describe("Test iam-policy-controller deployment", func() {
 				return getAddonStatus(addon)
 			}, 240, 1).Should(Equal(true))
 
-			By(cluster.clusterType + " " + cluster.clusterName +
-				": removing the iam-policy-controller deployment when the ManagedClusterAddOn CR is removed")
+			By(logPrefix + "removing the iam-policy-controller deployment when the ManagedClusterAddOn CR is removed")
 			Kubectl("delete", "-n", cluster.clusterName, "-f", case3ManagedClusterAddOnCR)
 			deploy = GetWithTimeout(
 				cluster.clusterClient, gvrDeployment, case3DeploymentName, addonNamespace, false, 30,
