@@ -10,8 +10,8 @@ import (
 
 const (
 	case2ManagedClusterAddOnCR string = "../resources/config_policy_addon_cr.yaml"
-	case2ConfigDeploymentName  string = "config-policy-controller"
-	case2ConfigPodSelector     string = "app=config-policy-controller"
+	case2DeploymentName        string = "config-policy-controller"
+	case2PodSelector           string = "app=config-policy-controller"
 )
 
 var _ = Describe("Test config-policy-controller deployment", func() {
@@ -21,14 +21,14 @@ var _ = Describe("Test config-policy-controller deployment", func() {
 			By(logPrefix + "deploying the default config-policy-controller managedclusteraddon")
 			Kubectl("apply", "-n", cluster.clusterName, "-f", case2ManagedClusterAddOnCR)
 			deploy := GetWithTimeout(
-				cluster.clusterClient, gvrDeployment, case2ConfigDeploymentName, addonNamespace, true, 30,
+				cluster.clusterClient, gvrDeployment, case2DeploymentName, addonNamespace, true, 30,
 			)
 			Expect(deploy).NotTo(BeNil())
 
 			By(logPrefix + "checking the number of containers in the deployment")
 			Eventually(func() int {
 				deploy = GetWithTimeout(
-					cluster.clusterClient, gvrDeployment, case2ConfigDeploymentName, addonNamespace, true, 30,
+					cluster.clusterClient, gvrDeployment, case2DeploymentName, addonNamespace, true, 30,
 				)
 				spec := deploy.Object["spec"].(map[string]interface{})["template"].(map[string]interface{})["spec"]
 				containers := spec.(map[string]interface{})["containers"]
@@ -39,7 +39,7 @@ var _ = Describe("Test config-policy-controller deployment", func() {
 			By(logPrefix + "verifying all replicas in config-policy-controller deployment are available")
 			Eventually(func() bool {
 				deploy = GetWithTimeout(
-					cluster.clusterClient, gvrDeployment, case2ConfigDeploymentName, addonNamespace, true, 30,
+					cluster.clusterClient, gvrDeployment, case2DeploymentName, addonNamespace, true, 30,
 				)
 				status := deploy.Object["status"]
 				replicas := status.(map[string]interface{})["replicas"]
@@ -51,7 +51,7 @@ var _ = Describe("Test config-policy-controller deployment", func() {
 			By(logPrefix + "verifying a running config-policy-controller pod")
 			Eventually(func() bool {
 				opts := metav1.ListOptions{
-					LabelSelector: case2ConfigPodSelector,
+					LabelSelector: case2PodSelector,
 				}
 				pods := ListWithTimeoutByNamespace(cluster.clusterClient, gvrPod, opts, addonNamespace, 1, true, 30)
 				phase := pods.Items[0].Object["status"].(map[string]interface{})["phase"]
@@ -62,7 +62,7 @@ var _ = Describe("Test config-policy-controller deployment", func() {
 			By(logPrefix + "showing the config-policy-controller managedclusteraddon as available")
 			Eventually(func() bool {
 				addon := GetWithTimeout(
-					clientDynamic, gvrManagedClusterAddOn, case2ConfigDeploymentName, cluster.clusterName, true, 30,
+					clientDynamic, gvrManagedClusterAddOn, case2DeploymentName, cluster.clusterName, true, 30,
 				)
 
 				return getAddonStatus(addon)
@@ -73,7 +73,7 @@ var _ = Describe("Test config-policy-controller deployment", func() {
 			By(logPrefix + "removing the config-policy-controller deployment when the ManagedClusterAddOn CR is removed")
 			Kubectl("delete", "-n", cluster.clusterName, "-f", case2ManagedClusterAddOnCR)
 			deploy = GetWithTimeout(
-				cluster.clusterClient, gvrDeployment, case2ConfigDeploymentName, addonNamespace, false, 30,
+				cluster.clusterClient, gvrDeployment, case2DeploymentName, addonNamespace, false, 30,
 			)
 			Expect(deploy).To(BeNil())
 		}
