@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 const (
@@ -67,6 +68,34 @@ var _ = Describe("Test iam-policy-controller deployment", func() {
 
 				return getAddonStatus(addon)
 			}, 240, 1).Should(Equal(true))
+
+			By(logPrefix + "annotating the managedclusteraddon with the " + loggingLevelAnnotation + " annotation")
+			Kubectl("annotate", "-n", cluster.clusterName, "-f", case3ManagedClusterAddOnCR, loggingLevelAnnotation)
+
+			By(cluster.clusterType + " " + cluster.clusterName + ": verifying a new iam-policy-controller pod is deployed")
+			opts := metav1.ListOptions{
+				LabelSelector: case3PodSelector,
+			}
+			_ = ListWithTimeoutByNamespace(cluster.clusterClient, gvrPod, opts, addonNamespace, 2, true, 30)
+
+			By(logPrefix + "verifying the pod has been deployed with a new logging level")
+			pods := ListWithTimeoutByNamespace(cluster.clusterClient, gvrPod, opts, addonNamespace, 1, true, 60)
+			containerList, _, err := unstructured.NestedSlice(pods.Items[0].Object, "spec", "containers")
+			if err != nil {
+				panic(err)
+			}
+			for _, container := range containerList {
+				containerObj := container.(map[string]interface{})
+				if Expect(containerObj).To(HaveKey("name")) && containerObj["name"] != case3DeploymentName {
+					continue
+				}
+				if Expect(containerObj).To(HaveKey("args")) {
+					args := containerObj["args"]
+					Expect(args).To(ContainElement("--log-encoder=console"))
+					Expect(args).To(ContainElement("--log-level=8"))
+					Expect(args).To(ContainElement("--v=6"))
+				}
+			}
 
 			By(logPrefix + "removing the iam-policy-controller deployment when the ManagedClusterAddOn CR is removed")
 			Kubectl("delete", "-n", cluster.clusterName, "-f", case3ManagedClusterAddOnCR)

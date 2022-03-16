@@ -70,6 +70,32 @@ var _ = Describe("Test framework deployment", func() {
 				return getAddonStatus(addon)
 			}, 240, 1).Should(Equal(true))
 
+			By(logPrefix + "annotating the managedclusteraddon with the " + loggingLevelAnnotation + " annotation")
+			Kubectl("annotate", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR, loggingLevelAnnotation)
+
+			By(cluster.clusterType + " " + cluster.clusterName + ": verifying a new framework pod is deployed")
+			opts := metav1.ListOptions{
+				LabelSelector: case1PodSelector,
+			}
+			_ = ListWithTimeoutByNamespace(cluster.clusterClient, gvrPod, opts, addonNamespace, 2, true, 30)
+
+			By(logPrefix + "verifying the pod has been deployed with a new logging level")
+			pods := ListWithTimeoutByNamespace(cluster.clusterClient, gvrPod, opts, addonNamespace, 1, true, 60)
+
+			containerList, _, err := unstructured.NestedSlice(pods.Items[0].Object, "spec", "containers")
+			if err != nil {
+				panic(err)
+			}
+
+			for _, container := range containerList {
+				if Expect(container).To(HaveKey("args")) {
+					args := container.(map[string]interface{})["args"]
+					Expect(args).To(ContainElement("--log-encoder=console"))
+					Expect(args).To(ContainElement("--log-level=8"))
+					Expect(args).To(ContainElement("--v=6"))
+				}
+			}
+
 			By(logPrefix + "removing the framework deployment when the ManagedClusterAddOn CR is removed")
 			Kubectl("delete", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR)
 			deploy = GetWithTimeout(
@@ -135,6 +161,32 @@ var _ = Describe("Test framework deployment", func() {
 				return getAddonStatus(addon)
 			}, 240, 1).Should(Equal(true))
 
+			By(logPrefix + "annotating the managedclusteraddon with the " + loggingLevelAnnotation + " annotation")
+			Kubectl("annotate", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR, loggingLevelAnnotation)
+
+			By(cluster.clusterType + " " + cluster.clusterName + ": verifying a new framework pod is deployed")
+			opts := metav1.ListOptions{
+				LabelSelector: case1PodSelector,
+			}
+			_ = ListWithTimeoutByNamespace(cluster.clusterClient, gvrPod, opts, addonNamespace, 2, true, 30)
+
+			By(logPrefix + "verifying the pod has been deployed with a new logging level")
+			pods := ListWithTimeoutByNamespace(cluster.clusterClient, gvrPod, opts, addonNamespace, 1, true, 60)
+
+			containerList, _, err := unstructured.NestedSlice(pods.Items[0].Object, "spec", "containers")
+			if err != nil {
+				panic(err)
+			}
+
+			for _, container := range containerList {
+				if Expect(container).To(HaveKey("args")) {
+					args := container.(map[string]interface{})["args"]
+					Expect(args).To(ContainElement("--log-encoder=console"))
+					Expect(args).To(ContainElement("--log-level=8"))
+					Expect(args).To(ContainElement("--v=6"))
+				}
+			}
+
 			By(cluster.clusterType + " " + cluster.clusterName + ": deleting the managedclusteraddon")
 			Kubectl("delete", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR)
 			deploy = GetWithTimeout(
@@ -199,6 +251,30 @@ var _ = Describe("Test framework deployment", func() {
 
 				return getAddonStatus(addon)
 			}, 240, 1).Should(Equal(true))
+
+			By(logPrefix + "annotating the managedclusteraddon with the " + loggingLevelAnnotation + " annotation")
+			Kubectl("annotate", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR, loggingLevelAnnotation)
+
+			By(cluster.clusterType + " " + cluster.clusterName + ": verifying a new framework pod is deployed")
+			opts := metav1.ListOptions{
+				LabelSelector: case1PodSelector,
+			}
+			_ = ListWithTimeoutByNamespace(cluster.clusterClient, gvrPod, opts, addonNamespace, 2, true, 30)
+
+			By(logPrefix + "verifying the pod has been deployed with a new logging level")
+			pods := ListWithTimeoutByNamespace(cluster.clusterClient, gvrPod, opts, addonNamespace, 1, true, 60)
+			containerList, _, err := unstructured.NestedSlice(pods.Items[0].Object, "spec", "containers")
+			if err != nil {
+				panic(err)
+			}
+			for _, container := range containerList {
+				if Expect(container).To(HaveKey("args")) {
+					args := container.(map[string]interface{})["args"]
+					Expect(args).To(ContainElement("--log-encoder=console"))
+					Expect(args).To(ContainElement("--log-level=8"))
+					Expect(args).To(ContainElement("--v=6"))
+				}
+			}
 
 			By(cluster.clusterType + " " + cluster.clusterName + ": deleting the managedclusteraddon")
 			Kubectl("delete", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR)
