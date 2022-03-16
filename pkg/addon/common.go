@@ -163,12 +163,14 @@ func (pa *PolicyAgentAddon) Manifests(cluster *clusterv1.ManagedCluster,
 // getLogLevel verifies the user-provided log level against Zap, returning 0 if the check fails.
 func GetLogLevel(component string, level string) int8 {
 	logDefault := int8(0)
+
 	logLevel, err := strconv.ParseInt(level, 10, 8)
 	if err != nil || logLevel < 0 {
 		log.Error(err, fmt.Sprintf(
 			"Failed to verify '%s' annotation value '%s' for component %s (falling back to default value %d)",
 			PolicyLogLevelAnnotation, level, component, logDefault),
 		)
+
 		return logDefault
 	}
 

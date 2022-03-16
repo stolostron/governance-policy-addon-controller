@@ -3,6 +3,8 @@
 package e2e
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -72,7 +74,8 @@ var _ = Describe("Test iam-policy-controller deployment", func() {
 			By(logPrefix + "annotating the managedclusteraddon with the " + loggingLevelAnnotation + " annotation")
 			Kubectl("annotate", "-n", cluster.clusterName, "-f", case3ManagedClusterAddOnCR, loggingLevelAnnotation)
 
-			By(cluster.clusterType + " " + cluster.clusterName + ": verifying a new iam-policy-controller pod is deployed")
+			By(cluster.clusterType + " " + cluster.clusterName +
+				": verifying a new iam-policy-controller pod is deployed")
 			opts := metav1.ListOptions{
 				LabelSelector: case3PodSelector,
 			}
@@ -85,15 +88,18 @@ var _ = Describe("Test iam-policy-controller deployment", func() {
 				panic(err)
 			}
 			for _, container := range containerList {
-				containerObj := container.(map[string]interface{})
-				if Expect(containerObj).To(HaveKey("name")) && containerObj["name"] != case3DeploymentName {
-					continue
-				}
-				if Expect(containerObj).To(HaveKey("args")) {
-					args := containerObj["args"]
-					Expect(args).To(ContainElement("--log-encoder=console"))
-					Expect(args).To(ContainElement("--log-level=8"))
-					Expect(args).To(ContainElement("--v=6"))
+				if containerObj, ok := container.(map[string]interface{}); ok {
+					if Expect(containerObj).To(HaveKey("name")) && containerObj["name"] != case2DeploymentName {
+						continue
+					}
+					if Expect(containerObj).To(HaveKey("args")) {
+						args := containerObj["args"]
+						Expect(args).To(ContainElement("--log-encoder=console"))
+						Expect(args).To(ContainElement("--log-level=8"))
+						Expect(args).To(ContainElement("--v=6"))
+					}
+				} else {
+					panic(fmt.Errorf("containerObj type assertion failed"))
 				}
 			}
 
