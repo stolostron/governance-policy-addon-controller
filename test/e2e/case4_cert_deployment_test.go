@@ -102,7 +102,7 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 			By(logPrefix + "annotating the managedclusteraddon with the " + loggingLevelAnnotation + " annotation")
 			Kubectl("annotate", "-n", cluster.clusterName, "-f", case4ManagedClusterAddOnCR, loggingLevelAnnotation)
 
-			By(logPrefix + ": verifying a new cert-policy-controller pod is deployed")
+			By(logPrefix + "verifying a new cert-policy-controller pod is deployed")
 			opts := metav1.ListOptions{
 				LabelSelector: case4PodSelector,
 			}

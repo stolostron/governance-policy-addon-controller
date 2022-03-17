@@ -102,7 +102,7 @@ var _ = Describe("Test iam-policy-controller deployment", func() {
 			By(logPrefix + "annotating the managedclusteraddon with the " + loggingLevelAnnotation + " annotation")
 			Kubectl("annotate", "-n", cluster.clusterName, "-f", case3ManagedClusterAddOnCR, loggingLevelAnnotation)
 
-			By(logPrefix + ": verifying a new iam-policy-controller pod is deployed")
+			By(logPrefix + "verifying a new iam-policy-controller pod is deployed")
 			opts := metav1.ListOptions{
 				LabelSelector: case3PodSelector,
 			}

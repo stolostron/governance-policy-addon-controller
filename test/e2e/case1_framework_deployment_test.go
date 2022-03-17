@@ -50,7 +50,7 @@ var _ = Describe("Test framework deployment", func() {
 				return (availableReplicas != nil) && replicas.(int64) == availableReplicas.(int64)
 			}, 240, 1).Should(Equal(true))
 
-			By(logPrefix + ": verifying a framework pod is running")
+			By(logPrefix + "verifying a framework pod is running")
 			Eventually(func() bool {
 				opts := metav1.ListOptions{
 					LabelSelector: case1PodSelector,
@@ -101,7 +101,7 @@ var _ = Describe("Test framework deployment", func() {
 			By(logPrefix + "annotating the managedclusteraddon with the " + loggingLevelAnnotation + " annotation")
 			Kubectl("annotate", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR, loggingLevelAnnotation)
 
-			By(logPrefix + ": verifying a new framework pod is deployed")
+			By(logPrefix + "verifying a new framework pod is deployed")
 			opts := metav1.ListOptions{
 				LabelSelector: case1PodSelector,
 			}
@@ -172,7 +172,7 @@ var _ = Describe("Test framework deployment", func() {
 				return (availableReplicas != nil) && replicas.(int64) == availableReplicas.(int64)
 			}, 240, 1).Should(Equal(true))
 
-			By(logPrefix + ": verifying a framework pod is running")
+			By(logPrefix + "verifying a framework pod is running")
 			Eventually(func() bool {
 				opts := metav1.ListOptions{
 					LabelSelector: case1PodSelector,
@@ -195,7 +195,7 @@ var _ = Describe("Test framework deployment", func() {
 			By(logPrefix + "annotating the managedclusteraddon with the " + loggingLevelAnnotation + " annotation")
 			Kubectl("annotate", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR, loggingLevelAnnotation)
 
-			By(logPrefix + ": verifying a new framework pod is deployed")
+			By(logPrefix + "verifying a new framework pod is deployed")
 			opts := metav1.ListOptions{
 				LabelSelector: case1PodSelector,
 			}
@@ -218,7 +218,7 @@ var _ = Describe("Test framework deployment", func() {
 				}
 			}
 
-			By(logPrefix + ": deleting the managedclusteraddon")
+			By(logPrefix + "deleting the managedclusteraddon")
 			Kubectl("delete", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR)
 			deploy = GetWithTimeout(
 				cluster.clusterClient, gvrDeployment, case1DeploymentName, addonNamespace, false, 30,
@@ -263,7 +263,7 @@ var _ = Describe("Test framework deployment", func() {
 				return (availableReplicas != nil) && replicas.(int64) == availableReplicas.(int64)
 			}, 240, 1).Should(Equal(true))
 
-			By(logPrefix + ": verifying a framework pod is running")
+			By(logPrefix + "verifying a framework pod is running")
 			Eventually(func() bool {
 				opts := metav1.ListOptions{
 					LabelSelector: case1PodSelector,
@@ -286,7 +286,7 @@ var _ = Describe("Test framework deployment", func() {
 			By(logPrefix + "annotating the managedclusteraddon with the " + loggingLevelAnnotation + " annotation")
 			Kubectl("annotate", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR, loggingLevelAnnotation)
 
-			By(logPrefix + ": verifying a new framework pod is deployed")
+			By(logPrefix + "verifying a new framework pod is deployed")
 			opts := metav1.ListOptions{
 				LabelSelector: case1PodSelector,
 			}
@@ -307,7 +307,7 @@ var _ = Describe("Test framework deployment", func() {
 				}
 			}
 
-			By(logPrefix + ": deleting the managedclusteraddon")
+			By(logPrefix + "deleting the managedclusteraddon")
 			Kubectl("delete", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR)
 			deploy = GetWithTimeout(
 				cluster.clusterClient, gvrDeployment, case1DeploymentName, addonNamespace, false, 30,
@@ -336,11 +336,11 @@ var _ = Describe("Test framework deployment", func() {
 				return defaultLength
 			}, 60, 5).ShouldNot(Equal(0))
 
-			By(logPrefix + ": patching the ManifestWork to add an item")
+			By(logPrefix + "patching the ManifestWork to add an item")
 			Kubectl("patch", "-n", cluster.clusterName, "manifestwork", case1MWName, "--type=json",
 				"--patch-file="+case1MWPatch)
 
-			By(logPrefix + ": verifying the edit is reverted")
+			By(logPrefix + "verifying the edit is reverted")
 			Eventually(func() int {
 				mw := GetWithTimeout(clientDynamic, gvrManifestWork, case1MWName, cluster.clusterName, true, 15)
 				manifests, _, _ := unstructured.NestedSlice(mw.Object, "spec", "workload", "manifests")
@@ -348,7 +348,7 @@ var _ = Describe("Test framework deployment", func() {
 				return len(manifests)
 			}, 60, 5).Should(Equal(defaultLength))
 
-			By(logPrefix + ": deleting the managedclusteraddon")
+			By(logPrefix + "deleting the managedclusteraddon")
 			Kubectl("delete", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR)
 			deploy = GetWithTimeout(
 				cluster.clusterClient, gvrDeployment, case1DeploymentName, addonNamespace, false, 30,
@@ -379,11 +379,11 @@ var _ = Describe("Test framework deployment", func() {
 				return defaultLength
 			}, 60, 5).ShouldNot(Equal(0))
 
-			By(logPrefix + ": patching the ManifestWork to add an item")
+			By(logPrefix + "patching the ManifestWork to add an item")
 			Kubectl("patch", "-n", cluster.clusterName, "manifestwork", case1MWName, "--type=json",
 				"--patch-file="+case1MWPatch)
 
-			By(logPrefix + ": verifying the edit is not reverted")
+			By(logPrefix + "verifying the edit is not reverted")
 			Consistently(func() int {
 				mw := GetWithTimeout(clientDynamic, gvrManifestWork, case1MWName, cluster.clusterName, true, 15)
 				manifests, _, _ := unstructured.NestedSlice(mw.Object, "spec", "workload", "manifests")
@@ -391,7 +391,7 @@ var _ = Describe("Test framework deployment", func() {
 				return len(manifests)
 			}, 30, 5).Should(Equal(defaultLength + 1))
 
-			By(logPrefix + ": deleting the managedclusteraddon")
+			By(logPrefix + "deleting the managedclusteraddon")
 			Kubectl("delete", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR)
 			deploy = GetWithTimeout(
 				cluster.clusterClient, gvrDeployment, case1DeploymentName, addonNamespace, false, 30,
