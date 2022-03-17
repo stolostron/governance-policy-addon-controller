@@ -71,11 +71,39 @@ var _ = Describe("Test config-policy-controller deployment", func() {
 				return getAddonStatus(addon)
 			}, 240, 1).Should(Equal(true))
 
+			By(logPrefix +
+				"removing the config-policy-controller deployment when the ManagedClusterAddOn CR is removed")
+			Kubectl("delete", "-n", cluster.clusterName, "-f", case2ManagedClusterAddOnCR)
+			deploy = GetWithTimeout(
+				cluster.clusterClient, gvrDeployment, case2DeploymentName, addonNamespace, false, 30,
+			)
+			Expect(deploy).To(BeNil())
+		}
+	})
+
+	It("should create a config-policy-controller deployment with custom logging levels", func() {
+		for _, cluster := range managedClusterList {
+			logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
+			By(logPrefix + "deploying the default config-policy-controller managedclusteraddon")
+			Kubectl("apply", "-n", cluster.clusterName, "-f", case2ManagedClusterAddOnCR)
+			deploy := GetWithTimeout(
+				cluster.clusterClient, gvrDeployment, case2DeploymentName, addonNamespace, true, 30,
+			)
+			Expect(deploy).NotTo(BeNil())
+
+			By(logPrefix + "showing the config-policy-controller managedclusteraddon as available")
+			Eventually(func() bool {
+				addon := GetWithTimeout(
+					clientDynamic, gvrManagedClusterAddOn, case2DeploymentName, cluster.clusterName, true, 30,
+				)
+
+				return getAddonStatus(addon)
+			}, 240, 1).Should(Equal(true))
+
 			By(logPrefix + "annotating the managedclusteraddon with the " + loggingLevelAnnotation + " annotation")
 			Kubectl("annotate", "-n", cluster.clusterName, "-f", case2ManagedClusterAddOnCR, loggingLevelAnnotation)
 
-			By(cluster.clusterType + " " + cluster.clusterName +
-				": verifying a new config-policy-controller pod is deployed")
+			By(logPrefix + ": verifying a new config-policy-controller pod is deployed")
 			opts := metav1.ListOptions{
 				LabelSelector: case2PodSelector,
 			}
@@ -83,6 +111,9 @@ var _ = Describe("Test config-policy-controller deployment", func() {
 
 			By(logPrefix + "verifying the pod has been deployed with a new logging level")
 			pods := ListWithTimeoutByNamespace(cluster.clusterClient, gvrPod, opts, addonNamespace, 1, true, 60)
+			phase := pods.Items[0].Object["status"].(map[string]interface{})["phase"]
+
+			Expect(phase.(string)).To(Equal("Running"))
 			containerList, _, err := unstructured.NestedSlice(pods.Items[0].Object, "spec", "containers")
 			if err != nil {
 				panic(err)
