@@ -3,6 +3,8 @@
 package e2e
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,47 +30,7 @@ var _ = Describe("Test framework deployment", func() {
 			)
 			Expect(deploy).NotTo(BeNil())
 
-			By(logPrefix + "checking the number of containers in the deployment")
-			Eventually(func() int {
-				deploy = GetWithTimeout(cluster.clusterClient, gvrDeployment,
-					case1DeploymentName, addonNamespace, true, 30)
-				spec := deploy.Object["spec"].(map[string]interface{})["template"].(map[string]interface{})["spec"]
-				containers := spec.(map[string]interface{})["containers"]
-
-				return len(containers.([]interface{}))
-			}, 60, 1).Should(Equal(3))
-
-			By(logPrefix + "verifying all replicas in framework deployment are available")
-			Eventually(func() bool {
-				deploy = GetWithTimeout(
-					cluster.clusterClient, gvrDeployment, case1DeploymentName, addonNamespace, true, 30,
-				)
-				status := deploy.Object["status"]
-				replicas := status.(map[string]interface{})["replicas"]
-				availableReplicas := status.(map[string]interface{})["availableReplicas"]
-
-				return (availableReplicas != nil) && replicas.(int64) == availableReplicas.(int64)
-			}, 240, 1).Should(Equal(true))
-
-			By(logPrefix + "verifying a framework pod is running")
-			Eventually(func() bool {
-				opts := metav1.ListOptions{
-					LabelSelector: case1PodSelector,
-				}
-				pods := ListWithTimeoutByNamespace(cluster.clusterClient, gvrPod, opts, addonNamespace, 1, true, 30)
-				phase := pods.Items[0].Object["status"].(map[string]interface{})["phase"]
-
-				return phase.(string) == "Running"
-			}, 60, 1).Should(Equal(true))
-
-			By(logPrefix + "showing the framework managedclusteraddon as available")
-			Eventually(func() bool {
-				addon := GetWithTimeout(
-					clientDynamic, gvrManagedClusterAddOn, case1DeploymentName, cluster.clusterName, true, 30,
-				)
-
-				return getAddonStatus(addon)
-			}, 240, 1).Should(Equal(true))
+			checkContainersAndAvailability(cluster, 3)
 
 			By(logPrefix + "removing the framework deployment when the ManagedClusterAddOn CR is removed")
 			Kubectl("delete", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR)
@@ -89,43 +51,12 @@ var _ = Describe("Test framework deployment", func() {
 			)
 			Expect(deploy).NotTo(BeNil())
 
-			By(logPrefix + "showing the framework managedclusteraddon as available")
-			Eventually(func() bool {
-				addon := GetWithTimeout(
-					clientDynamic, gvrManagedClusterAddOn, case1DeploymentName, cluster.clusterName, true, 30,
-				)
-
-				return getAddonStatus(addon)
-			}, 240, 1).Should(Equal(true))
+			checkContainersAndAvailability(cluster, 3)
 
 			By(logPrefix + "annotating the managedclusteraddon with the " + loggingLevelAnnotation + " annotation")
 			Kubectl("annotate", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR, loggingLevelAnnotation)
 
-			By(logPrefix + "verifying a new framework pod is deployed")
-			opts := metav1.ListOptions{
-				LabelSelector: case1PodSelector,
-			}
-			_ = ListWithTimeoutByNamespace(cluster.clusterClient, gvrPod, opts, addonNamespace, 2, true, 30)
-
-			By(logPrefix + "verifying the pod has been deployed with a new logging level")
-			pods := ListWithTimeoutByNamespace(cluster.clusterClient, gvrPod, opts, addonNamespace, 1, true, 30)
-			phase := pods.Items[0].Object["status"].(map[string]interface{})["phase"]
-
-			Expect(phase.(string)).To(Equal("Running"))
-
-			containerList, _, err := unstructured.NestedSlice(pods.Items[0].Object, "spec", "containers")
-			if err != nil {
-				panic(err)
-			}
-
-			for _, container := range containerList {
-				if Expect(container).To(HaveKey("args")) {
-					args := container.(map[string]interface{})["args"]
-					Expect(args).To(ContainElement("--log-encoder=console"))
-					Expect(args).To(ContainElement("--log-level=8"))
-					Expect(args).To(ContainElement("--v=6"))
-				}
-			}
+			checkArgs(cluster, "--log-encoder=console", "--log-level=8", "--v=6")
 
 			By(logPrefix + "removing the framework deployment when the ManagedClusterAddOn CR is removed")
 			Kubectl("delete", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR)
@@ -150,73 +81,12 @@ var _ = Describe("Test framework deployment", func() {
 			Kubectl("annotate", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR,
 				"addon.open-cluster-management.io/values={\"onMulticlusterHub\":true}")
 
-			By(logPrefix + "checking the number of containers in the deployment")
-			Eventually(func() int {
-				deploy = GetWithTimeout(cluster.clusterClient, gvrDeployment,
-					case1DeploymentName, addonNamespace, true, 30)
-				spec := deploy.Object["spec"].(map[string]interface{})["template"].(map[string]interface{})["spec"]
-				containers := spec.(map[string]interface{})["containers"]
-
-				return len(containers.([]interface{}))
-			}, 60, 1).Should(Equal(2))
-
-			By(logPrefix + "verifying all replicas in framework deployment are available")
-			Eventually(func() bool {
-				deploy = GetWithTimeout(
-					cluster.clusterClient, gvrDeployment, case1DeploymentName, addonNamespace, true, 30,
-				)
-				status := deploy.Object["status"]
-				replicas := status.(map[string]interface{})["replicas"]
-				availableReplicas := status.(map[string]interface{})["availableReplicas"]
-
-				return (availableReplicas != nil) && replicas.(int64) == availableReplicas.(int64)
-			}, 240, 1).Should(Equal(true))
-
-			By(logPrefix + "verifying a framework pod is running")
-			Eventually(func() bool {
-				opts := metav1.ListOptions{
-					LabelSelector: case1PodSelector,
-				}
-				pods := ListWithTimeoutByNamespace(cluster.clusterClient, gvrPod, opts, addonNamespace, 1, true, 30)
-				phase := pods.Items[0].Object["status"].(map[string]interface{})["phase"]
-
-				return phase.(string) == "Running"
-			}, 60, 1).Should(Equal(true))
-
-			By(logPrefix + "showing the framework managedclusteraddon as available")
-			Eventually(func() bool {
-				addon := GetWithTimeout(
-					clientDynamic, gvrManagedClusterAddOn, case1DeploymentName, cluster.clusterName, true, 30,
-				)
-
-				return getAddonStatus(addon)
-			}, 240, 1).Should(Equal(true))
+			checkContainersAndAvailability(cluster, 2)
 
 			By(logPrefix + "annotating the managedclusteraddon with the " + loggingLevelAnnotation + " annotation")
 			Kubectl("annotate", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR, loggingLevelAnnotation)
 
-			By(logPrefix + "verifying a new framework pod is deployed")
-			opts := metav1.ListOptions{
-				LabelSelector: case1PodSelector,
-			}
-			_ = ListWithTimeoutByNamespace(cluster.clusterClient, gvrPod, opts, addonNamespace, 2, true, 30)
-
-			By(logPrefix + "verifying the pod has been deployed with a new logging level")
-			pods := ListWithTimeoutByNamespace(cluster.clusterClient, gvrPod, opts, addonNamespace, 1, true, 60)
-
-			containerList, _, err := unstructured.NestedSlice(pods.Items[0].Object, "spec", "containers")
-			if err != nil {
-				panic(err)
-			}
-
-			for _, container := range containerList {
-				if Expect(container).To(HaveKey("args")) {
-					args := container.(map[string]interface{})["args"]
-					Expect(args).To(ContainElement("--log-encoder=console"))
-					Expect(args).To(ContainElement("--log-level=8"))
-					Expect(args).To(ContainElement("--v=6"))
-				}
-			}
+			checkArgs(cluster, "--log-encoder=console", "--log-level=8", "--v=6")
 
 			By(logPrefix + "deleting the managedclusteraddon")
 			Kubectl("delete", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR)
@@ -241,71 +111,9 @@ var _ = Describe("Test framework deployment", func() {
 			Kubectl("annotate", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR,
 				"addon.open-cluster-management.io/on-multicluster-hub=true")
 
-			By(logPrefix + "checking the number of containers in the deployment")
-			Eventually(func() int {
-				deploy = GetWithTimeout(cluster.clusterClient, gvrDeployment,
-					case1DeploymentName, addonNamespace, true, 30)
-				spec := deploy.Object["spec"].(map[string]interface{})["template"].(map[string]interface{})["spec"]
-				containers := spec.(map[string]interface{})["containers"]
+			checkContainersAndAvailability(cluster, 2)
 
-				return len(containers.([]interface{}))
-			}, 60, 1).Should(Equal(2))
-
-			By(logPrefix + "verifying all replicas in framework deployment are available")
-			Eventually(func() bool {
-				deploy = GetWithTimeout(
-					cluster.clusterClient, gvrDeployment, case1DeploymentName, addonNamespace, true, 30,
-				)
-				status := deploy.Object["status"]
-				replicas := status.(map[string]interface{})["replicas"]
-				availableReplicas := status.(map[string]interface{})["availableReplicas"]
-
-				return (availableReplicas != nil) && replicas.(int64) == availableReplicas.(int64)
-			}, 240, 1).Should(Equal(true))
-
-			By(logPrefix + "verifying a framework pod is running")
-			Eventually(func() bool {
-				opts := metav1.ListOptions{
-					LabelSelector: case1PodSelector,
-				}
-				pods := ListWithTimeoutByNamespace(cluster.clusterClient, gvrPod, opts, addonNamespace, 1, true, 30)
-				phase := pods.Items[0].Object["status"].(map[string]interface{})["phase"]
-
-				return phase.(string) == "Running"
-			}, 60, 1).Should(Equal(true))
-
-			By(logPrefix + "showing the framework managedclusteraddon as available")
-			Eventually(func() bool {
-				addon := GetWithTimeout(
-					clientDynamic, gvrManagedClusterAddOn, case1DeploymentName, cluster.clusterName, true, 30,
-				)
-
-				return getAddonStatus(addon)
-			}, 240, 1).Should(Equal(true))
-
-			By(logPrefix + "annotating the managedclusteraddon with the " + loggingLevelAnnotation + " annotation")
-			Kubectl("annotate", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR, loggingLevelAnnotation)
-
-			By(logPrefix + "verifying a new framework pod is deployed")
-			opts := metav1.ListOptions{
-				LabelSelector: case1PodSelector,
-			}
-			_ = ListWithTimeoutByNamespace(cluster.clusterClient, gvrPod, opts, addonNamespace, 2, true, 30)
-
-			By(logPrefix + "verifying the pod has been deployed with a new logging level")
-			pods := ListWithTimeoutByNamespace(cluster.clusterClient, gvrPod, opts, addonNamespace, 1, true, 60)
-			containerList, _, err := unstructured.NestedSlice(pods.Items[0].Object, "spec", "containers")
-			if err != nil {
-				panic(err)
-			}
-			for _, container := range containerList {
-				if Expect(container).To(HaveKey("args")) {
-					args := container.(map[string]interface{})["args"]
-					Expect(args).To(ContainElement("--log-encoder=console"))
-					Expect(args).To(ContainElement("--log-level=8"))
-					Expect(args).To(ContainElement("--v=6"))
-				}
-			}
+			checkArgs(cluster, "--log-encoder=console", "--log-level=8", "--v=6")
 
 			By(logPrefix + "deleting the managedclusteraddon")
 			Kubectl("delete", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR)
@@ -400,3 +208,85 @@ var _ = Describe("Test framework deployment", func() {
 		}
 	})
 })
+
+func checkContainersAndAvailability(cluster managedClusterConfig, desiredContainerCount int) {
+	logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
+
+	By(logPrefix + "checking the number of containers in the deployment")
+	Eventually(func() int {
+		deploy := GetWithTimeout(cluster.clusterClient, gvrDeployment,
+			case1DeploymentName, addonNamespace, true, 30)
+		spec := deploy.Object["spec"].(map[string]interface{})["template"].(map[string]interface{})["spec"]
+		containers := spec.(map[string]interface{})["containers"]
+
+		return len(containers.([]interface{}))
+	}, 60, 1).Should(Equal(desiredContainerCount))
+
+	By(logPrefix + "verifying all replicas in framework deployment are available")
+	Eventually(func() bool {
+		deploy := GetWithTimeout(
+			cluster.clusterClient, gvrDeployment, case1DeploymentName, addonNamespace, true, 30,
+		)
+		status := deploy.Object["status"]
+		replicas := status.(map[string]interface{})["replicas"]
+		availableReplicas := status.(map[string]interface{})["availableReplicas"]
+
+		return (availableReplicas != nil) && replicas.(int64) == availableReplicas.(int64)
+	}, 240, 1).Should(Equal(true))
+
+	By(logPrefix + "verifying one framework pod is running")
+	Eventually(func() bool {
+		opts := metav1.ListOptions{
+			LabelSelector: case1PodSelector,
+		}
+		pods := ListWithTimeoutByNamespace(cluster.clusterClient, gvrPod, opts, addonNamespace, 1, true, 30)
+		phase := pods.Items[0].Object["status"].(map[string]interface{})["phase"]
+
+		return phase.(string) == "Running"
+	}, 60, 1).Should(Equal(true))
+
+	By(logPrefix + "showing the framework managedclusteraddon as available")
+	Eventually(func() bool {
+		addon := GetWithTimeout(
+			clientDynamic, gvrManagedClusterAddOn, case1DeploymentName, cluster.clusterName, true, 30,
+		)
+
+		return getAddonStatus(addon)
+	}, 240, 1).Should(Equal(true))
+}
+
+func checkArgs(cluster managedClusterConfig, desiredArgs ...string) {
+	logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
+
+	By(logPrefix + "verifying one framework pod is running and has the desired args")
+	Eventually(func() error {
+		opts := metav1.ListOptions{
+			LabelSelector: case1PodSelector,
+		}
+		pods := ListWithTimeoutByNamespace(cluster.clusterClient, gvrPod, opts, addonNamespace, 1, true, 30)
+		podObj := pods.Items[0].Object
+
+		phase, found, err := unstructured.NestedString(podObj, "status", "phase")
+		if err != nil || !found || phase != "Running" {
+			return fmt.Errorf("pod phase is not running; found=%v; err=%v", found, err)
+		}
+
+		containerList, found, err := unstructured.NestedSlice(podObj, "spec", "containers")
+		if err != nil || !found {
+			return fmt.Errorf("could not get container list; found=%v; err=%v", found, err)
+		}
+
+		for _, container := range containerList {
+			containerObj := container.(map[string]interface{})
+
+			argList, found, err := unstructured.NestedStringSlice(containerObj, "args")
+			if err != nil || !found {
+				return fmt.Errorf("could not get container args; found=%v; err=%v", found, err)
+			}
+
+			Expect(argList).To(ContainElements(desiredArgs))
+		}
+
+		return nil
+	}, 120, 1).Should(BeNil())
+}
