@@ -24,6 +24,8 @@ const (
 var _ = Describe("Test framework deployment", func() {
 	It("should create the default framework deployment on separate managed clusters", func() {
 		for _, cluster := range managedClusterList[1:] {
+			Expect(cluster.clusterType).To(Equal("managed"))
+
 			logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
 			By(logPrefix + "deploying the default framework managedclusteraddon")
 			Kubectl("apply", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR)
@@ -74,13 +76,13 @@ var _ = Describe("Test framework deployment", func() {
 		}
 	})
 
-	It("should deploy with 2 containers if onManagedClusterHub is set in helm values annotation", func() {
+	It("should use the onManagedClusterHub value set in helm values annotation", func() {
 		cluster := managedClusterList[0]
 		Expect(cluster.clusterType).To(Equal("hub"))
 
 		logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
 
-		By(logPrefix + "deploying the default framework managedclusteraddon")
+		By(logPrefix + "deploying the annotated framework managedclusteraddon")
 		Kubectl("apply", "-n", cluster.clusterName, "-f", case1hubValuesMCAOCR)
 		deploy := GetWithTimeout(
 			cluster.clusterClient, gvrDeployment, case1DeploymentName, addonNamespace, true, 30,
@@ -100,26 +102,30 @@ var _ = Describe("Test framework deployment", func() {
 			cluster.clusterClient, gvrDeployment, case1DeploymentName, addonNamespace, false, 30,
 		)
 		Expect(deploy).To(BeNil())
+
+		By(logPrefix + "checking the managed cluster namespace is not deleted after addon removed")
+		Consistently(func() *unstructured.Unstructured {
+			return GetWithTimeoutClusterResource(cluster.clusterClient, gvrNamespace, cluster.clusterName, true, 15)
+		}, 30, 5).Should(Not(BeNil()))
 	})
 
-	It("should deploy with 2 containers if onManagedClusterHub is set in the custom annotation", func() {
+	It("should use the onManagedClusterHub value set in the custom annotation", func() {
 		cluster := managedClusterList[0]
 		Expect(cluster.clusterType).To(Equal("hub"))
 
 		logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
 
-		By(logPrefix + "deploying the default framework managedclusteraddon")
+		By(logPrefix + "deploying the annotated framework managedclusteraddon")
 		Kubectl("apply", "-n", cluster.clusterName, "-f", case1hubAnnotationMCAOCR)
 		deploy := GetWithTimeout(
 			cluster.clusterClient, gvrDeployment, case1DeploymentName, addonNamespace, true, 30,
 		)
 		Expect(deploy).NotTo(BeNil())
 
-		By(logPrefix + "annotating the framework managedclusteraddon with custom annotation")
-		Kubectl("annotate", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR,
-			"addon.open-cluster-management.io/on-multicluster-hub=true")
-
 		checkContainersAndAvailability(cluster)
+
+		By(logPrefix + "annotating the managedclusteraddon with the " + loggingLevelAnnotation + " annotation")
+		Kubectl("annotate", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR, loggingLevelAnnotation)
 
 		checkArgs(cluster, "--log-encoder=console", "--log-level=8", "--v=6")
 
@@ -129,6 +135,11 @@ var _ = Describe("Test framework deployment", func() {
 			cluster.clusterClient, gvrDeployment, case1DeploymentName, addonNamespace, false, 30,
 		)
 		Expect(deploy).To(BeNil())
+
+		By(logPrefix + "checking the managed cluster namespace is not deleted after addon removed")
+		Consistently(func() *unstructured.Unstructured {
+			return GetWithTimeoutClusterResource(cluster.clusterClient, gvrNamespace, cluster.clusterName, true, 15)
+		}, 30, 5).Should(Not(BeNil()))
 	})
 
 	It("should revert edits to the ManifestWork by default", func() {
@@ -175,6 +186,7 @@ var _ = Describe("Test framework deployment", func() {
 			Expect(deploy).To(BeNil())
 		}
 	})
+
 	It("should preserve edits to the ManifestWork if paused by annotation", func() {
 		for _, cluster := range managedClusterList {
 			logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
@@ -220,6 +232,36 @@ var _ = Describe("Test framework deployment", func() {
 				cluster.clusterClient, gvrDeployment, case1DeploymentName, addonNamespace, false, 30,
 			)
 			Expect(deploy).To(BeNil())
+		}
+	})
+
+	It("should manage the cluster namespace on managed clusters", func() {
+		for _, cluster := range managedClusterList[1:] {
+			Expect(cluster.clusterType).To(Equal("managed"))
+
+			logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
+			By(logPrefix + "checking the managed cluster namespace does not exist before addon created")
+			GetWithTimeoutClusterResource(cluster.clusterClient, gvrNamespace, cluster.clusterName, false, 15)
+
+			By(logPrefix + "deploying the default framework managedclusteraddon")
+			Kubectl("apply", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR)
+			deploy := GetWithTimeout(
+				cluster.clusterClient, gvrDeployment, case1DeploymentName, addonNamespace, true, 30,
+			)
+			Expect(deploy).NotTo(BeNil())
+
+			By(logPrefix + "checking the managed cluster namespace exists after addon created")
+			GetWithTimeoutClusterResource(cluster.clusterClient, gvrNamespace, cluster.clusterName, true, 15)
+
+			By(logPrefix + "deleting the managedclusteraddon")
+			Kubectl("delete", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR)
+			deploy = GetWithTimeout(
+				cluster.clusterClient, gvrDeployment, case1DeploymentName, addonNamespace, false, 30,
+			)
+			Expect(deploy).To(BeNil())
+
+			By(logPrefix + "checking the managed cluster namespace is deleted after addon removed")
+			GetWithTimeoutClusterResource(cluster.clusterClient, gvrNamespace, cluster.clusterName, false, 15)
 		}
 	})
 })
@@ -279,7 +321,7 @@ func checkArgs(cluster managedClusterConfig, desiredArgs ...string) {
 	logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
 
 	By(logPrefix + "verifying one framework pod is running and has the desired args")
-	Eventually(func() error {
+	Eventually(func(g Gomega) error {
 		opts := metav1.ListOptions{
 			LabelSelector: case1PodSelector,
 		}
@@ -288,23 +330,26 @@ func checkArgs(cluster managedClusterConfig, desiredArgs ...string) {
 
 		phase, found, err := unstructured.NestedString(podObj, "status", "phase")
 		if err != nil || !found || phase != "Running" {
-			return fmt.Errorf("pod phase is not running; found=%v; err=%v", found, err)
+			return fmt.Errorf("pod phase is not running; found=%v; err=%w", found, err)
 		}
 
 		containerList, found, err := unstructured.NestedSlice(podObj, "spec", "containers")
 		if err != nil || !found {
-			return fmt.Errorf("could not get container list; found=%v; err=%v", found, err)
+			return fmt.Errorf("could not get container list; found=%v; err=%w", found, err)
 		}
 
 		for _, container := range containerList {
-			containerObj := container.(map[string]interface{})
+			containerObj, ok := container.(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("could not convert container to map; container=%v", container)
+			}
 
 			argList, found, err := unstructured.NestedStringSlice(containerObj, "args")
 			if err != nil || !found {
-				return fmt.Errorf("could not get container args; found=%v; err=%v", found, err)
+				return fmt.Errorf("could not get container args; found=%v; err=%w", found, err)
 			}
 
-			Expect(argList).To(ContainElements(desiredArgs))
+			g.Expect(argList).To(ContainElements(desiredArgs))
 		}
 
 		return nil
