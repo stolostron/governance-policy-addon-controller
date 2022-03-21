@@ -13,6 +13,8 @@ import (
 
 const (
 	case1ManagedClusterAddOnCR string = "../resources/framework_addon_cr.yaml"
+	case1hubAnnotationMCAOCR   string = "../resources/framework_hub_annotation_addon_cr.yaml"
+	case1hubValuesMCAOCR       string = "../resources/framework_hub_values_addon_cr.yaml"
 	case1DeploymentName        string = "governance-policy-framework"
 	case1PodSelector           string = "app=governance-policy-framework"
 	case1MWName                string = "addon-governance-policy-framework-deploy"
@@ -20,8 +22,8 @@ const (
 )
 
 var _ = Describe("Test framework deployment", func() {
-	It("should create the default framework deployment", func() {
-		for _, cluster := range managedClusterList {
+	It("should create the default framework deployment on separate managed clusters", func() {
+		for _, cluster := range managedClusterList[1:] {
 			logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
 			By(logPrefix + "deploying the default framework managedclusteraddon")
 			Kubectl("apply", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR)
@@ -30,7 +32,7 @@ var _ = Describe("Test framework deployment", func() {
 			)
 			Expect(deploy).NotTo(BeNil())
 
-			checkContainersAndAvailability(cluster, 3)
+			checkContainersAndAvailability(cluster)
 
 			By(logPrefix + "removing the framework deployment when the ManagedClusterAddOn CR is removed")
 			Kubectl("delete", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR)
@@ -45,13 +47,18 @@ var _ = Describe("Test framework deployment", func() {
 		for _, cluster := range managedClusterList {
 			logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
 			By(logPrefix + "deploying the default framework managedclusteraddon")
-			Kubectl("apply", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR)
+			if cluster.clusterType == "hub" {
+				Kubectl("apply", "-n", cluster.clusterName, "-f", case1hubAnnotationMCAOCR)
+			} else {
+				Kubectl("apply", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR)
+			}
+
 			deploy := GetWithTimeout(
 				cluster.clusterClient, gvrDeployment, case1DeploymentName, addonNamespace, true, 30,
 			)
 			Expect(deploy).NotTo(BeNil())
 
-			checkContainersAndAvailability(cluster, 3)
+			checkContainersAndAvailability(cluster)
 
 			By(logPrefix + "annotating the managedclusteraddon with the " + loggingLevelAnnotation + " annotation")
 			Kubectl("annotate", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR, loggingLevelAnnotation)
@@ -68,67 +75,71 @@ var _ = Describe("Test framework deployment", func() {
 	})
 
 	It("should deploy with 2 containers if onManagedClusterHub is set in helm values annotation", func() {
-		for _, cluster := range managedClusterList {
-			logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
-			By(logPrefix + "deploying the default framework managedclusteraddon")
-			Kubectl("apply", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR)
-			deploy := GetWithTimeout(
-				cluster.clusterClient, gvrDeployment, case1DeploymentName, addonNamespace, true, 30,
-			)
-			Expect(deploy).NotTo(BeNil())
+		cluster := managedClusterList[0]
+		Expect(cluster.clusterType).To(Equal("hub"))
 
-			By(logPrefix + "annotating the framework managedclusteraddon with helm values")
-			Kubectl("annotate", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR,
-				"addon.open-cluster-management.io/values={\"onMulticlusterHub\":true}")
+		logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
 
-			checkContainersAndAvailability(cluster, 2)
+		By(logPrefix + "deploying the default framework managedclusteraddon")
+		Kubectl("apply", "-n", cluster.clusterName, "-f", case1hubValuesMCAOCR)
+		deploy := GetWithTimeout(
+			cluster.clusterClient, gvrDeployment, case1DeploymentName, addonNamespace, true, 30,
+		)
+		Expect(deploy).NotTo(BeNil())
 
-			By(logPrefix + "annotating the managedclusteraddon with the " + loggingLevelAnnotation + " annotation")
-			Kubectl("annotate", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR, loggingLevelAnnotation)
+		checkContainersAndAvailability(cluster)
 
-			checkArgs(cluster, "--log-encoder=console", "--log-level=8", "--v=6")
+		By(logPrefix + "annotating the managedclusteraddon with the " + loggingLevelAnnotation + " annotation")
+		Kubectl("annotate", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR, loggingLevelAnnotation)
 
-			By(logPrefix + "deleting the managedclusteraddon")
-			Kubectl("delete", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR)
-			deploy = GetWithTimeout(
-				cluster.clusterClient, gvrDeployment, case1DeploymentName, addonNamespace, false, 30,
-			)
-			Expect(deploy).To(BeNil())
-		}
+		checkArgs(cluster, "--log-encoder=console", "--log-level=8", "--v=6")
+
+		By(logPrefix + "deleting the managedclusteraddon")
+		Kubectl("delete", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR)
+		deploy = GetWithTimeout(
+			cluster.clusterClient, gvrDeployment, case1DeploymentName, addonNamespace, false, 30,
+		)
+		Expect(deploy).To(BeNil())
 	})
 
 	It("should deploy with 2 containers if onManagedClusterHub is set in the custom annotation", func() {
-		for _, cluster := range managedClusterList {
-			logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
-			By(logPrefix + "deploying the default framework managedclusteraddon")
-			Kubectl("apply", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR)
-			deploy := GetWithTimeout(
-				cluster.clusterClient, gvrDeployment, case1DeploymentName, addonNamespace, true, 30,
-			)
-			Expect(deploy).NotTo(BeNil())
+		cluster := managedClusterList[0]
+		Expect(cluster.clusterType).To(Equal("hub"))
 
-			By(logPrefix + "annotating the framework managedclusteraddon with custom annotation")
-			Kubectl("annotate", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR,
-				"addon.open-cluster-management.io/on-multicluster-hub=true")
+		logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
 
-			checkContainersAndAvailability(cluster, 2)
+		By(logPrefix + "deploying the default framework managedclusteraddon")
+		Kubectl("apply", "-n", cluster.clusterName, "-f", case1hubAnnotationMCAOCR)
+		deploy := GetWithTimeout(
+			cluster.clusterClient, gvrDeployment, case1DeploymentName, addonNamespace, true, 30,
+		)
+		Expect(deploy).NotTo(BeNil())
 
-			checkArgs(cluster, "--log-encoder=console", "--log-level=8", "--v=6")
+		By(logPrefix + "annotating the framework managedclusteraddon with custom annotation")
+		Kubectl("annotate", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR,
+			"addon.open-cluster-management.io/on-multicluster-hub=true")
 
-			By(logPrefix + "deleting the managedclusteraddon")
-			Kubectl("delete", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR)
-			deploy = GetWithTimeout(
-				cluster.clusterClient, gvrDeployment, case1DeploymentName, addonNamespace, false, 30,
-			)
-			Expect(deploy).To(BeNil())
-		}
+		checkContainersAndAvailability(cluster)
+
+		checkArgs(cluster, "--log-encoder=console", "--log-level=8", "--v=6")
+
+		By(logPrefix + "deleting the managedclusteraddon")
+		Kubectl("delete", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR)
+		deploy = GetWithTimeout(
+			cluster.clusterClient, gvrDeployment, case1DeploymentName, addonNamespace, false, 30,
+		)
+		Expect(deploy).To(BeNil())
 	})
 
 	It("should revert edits to the ManifestWork by default", func() {
 		for _, cluster := range managedClusterList {
 			logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
 			By(logPrefix + "deploying the default framework managedclusteraddon")
-			Kubectl("apply", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR)
+			if cluster.clusterType == "hub" {
+				Kubectl("apply", "-n", cluster.clusterName, "-f", case1hubAnnotationMCAOCR)
+			} else {
+				Kubectl("apply", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR)
+			}
 			deploy := GetWithTimeout(
 				cluster.clusterClient, gvrDeployment, case1DeploymentName, addonNamespace, true, 30,
 			)
@@ -168,7 +179,11 @@ var _ = Describe("Test framework deployment", func() {
 		for _, cluster := range managedClusterList {
 			logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
 			By(logPrefix + "deploying the default framework managedclusteraddon")
-			Kubectl("apply", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR)
+			if cluster.clusterType == "hub" {
+				Kubectl("apply", "-n", cluster.clusterName, "-f", case1hubAnnotationMCAOCR)
+			} else {
+				Kubectl("apply", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR)
+			}
 			deploy := GetWithTimeout(
 				cluster.clusterClient, gvrDeployment, case1DeploymentName, addonNamespace, true, 30,
 			)
@@ -209,8 +224,13 @@ var _ = Describe("Test framework deployment", func() {
 	})
 })
 
-func checkContainersAndAvailability(cluster managedClusterConfig, desiredContainerCount int) {
+func checkContainersAndAvailability(cluster managedClusterConfig) {
 	logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
+
+	desiredContainerCount := 3
+	if cluster.clusterType == "hub" {
+		desiredContainerCount = 2
+	}
 
 	By(logPrefix + "checking the number of containers in the deployment")
 	Eventually(func() int {
