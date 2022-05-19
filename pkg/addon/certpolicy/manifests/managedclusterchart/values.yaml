@@ -11,6 +11,7 @@ args:
   logLevel: 0
   pkgLogLevel: -1
   logEncoder: console
+hubKubeConfigSecret: cert-policy-controller-hub-kubeconfig
 
 resources:
   requests:
