@@ -15,6 +15,7 @@ securityContext:
   allowPrivilegeEscalation: false
   readOnlyRootFilesystem: true
   runAsNonRoot: true
+hubKubeConfigSecret: iam-policy-controller-hub-kubeconfig
 
 resources:
   requests:

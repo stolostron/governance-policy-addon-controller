@@ -80,9 +80,14 @@ spec:
         volumeMounts:
         - name: tmp
           mountPath: "/tmp"
+        - name: klusterlet-config
+          mountPath: /var/run/klusterlet
       volumes:
       - name: tmp
         emptyDir: {}
+      - name: klusterlet-config
+        secret:
+          secretName: {{ .Values.hubKubeConfigSecret }}
       {{- if .Values.global.imagePullSecret }}
       imagePullSecrets:
       - name: {{ .Values.global.imagePullSecret }}
