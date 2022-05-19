@@ -12,6 +12,7 @@ defaults:
 
 jobs:
   crd-sync-validation:
+    if: github.repository_owner == 'stolostron'
     runs-on: ubuntu-latest
     name: CRD Sync Validation
     steps:
