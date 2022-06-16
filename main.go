@@ -31,10 +31,10 @@ import (
 	"open-cluster-management.io/addon-framework/pkg/addonmanager"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"github.com/stolostron/governance-policy-addon-controller/pkg/addon/certpolicy"
-	"github.com/stolostron/governance-policy-addon-controller/pkg/addon/configpolicy"
-	"github.com/stolostron/governance-policy-addon-controller/pkg/addon/iampolicy"
-	"github.com/stolostron/governance-policy-addon-controller/pkg/addon/policyframework"
+	"open-cluster-management.io/governance-policy-addon-controller/pkg/addon/certpolicy"
+	"open-cluster-management.io/governance-policy-addon-controller/pkg/addon/configpolicy"
+	"open-cluster-management.io/governance-policy-addon-controller/pkg/addon/iampolicy"
+	"open-cluster-management.io/governance-policy-addon-controller/pkg/addon/policyframework"
 )
 
 //+kubebuilder:rbac:groups=authorization.k8s.io,resources=subjectaccessreviews,verbs=get;create
