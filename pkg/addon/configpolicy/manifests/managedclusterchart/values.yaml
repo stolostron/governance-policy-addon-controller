@@ -34,7 +34,7 @@ global:
   imagePullPolicy: IfNotPresent
   imagePullSecret: open-cluster-management-image-pull-credentials
   imageOverrides: 
-    config_policy_controller: quay.io/open-cluster-management/config-policy-controller:latest
+    config_policy_controller: quay.io/stolostron/config-policy-controller:latest
   nodeSelector: {}
   proxyConfig:
     HTTP_PROXY: null

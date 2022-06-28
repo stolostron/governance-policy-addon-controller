@@ -40,7 +40,7 @@ global:
   imagePullPolicy: IfNotPresent
   imagePullSecret: open-cluster-management-image-pull-credentials
   imageOverrides:
-    cert_policy_controller: quay.io/open-cluster-management/cert-policy-controller:latest
+    cert_policy_controller: quay.io/stolostron/cert-policy-controller:latest
   nodeSelector: {}
   proxyConfig:
     HTTP_PROXY: null
