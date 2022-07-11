@@ -65,6 +65,11 @@ jobs:
         export GOPATH=$(go env GOPATH)
         make wait-for-work-agent
         make e2e-test
+    
+    - name: Debug
+      if: ${{ failure() }}
+      run: |
+        RUN_MODE="debug" ./build/manage-clusters.sh
 
     - name: Gosec
       if: |
@@ -91,4 +96,4 @@ jobs:
     - name: Clean up cluster
       if: ${{ always() }}
       run: |
-        DELETE_CLUSTERS="true" ./build/manage-clusters.sh
+        RUN_MODE="delete" ./build/manage-clusters.sh
