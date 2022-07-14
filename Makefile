@@ -154,6 +154,11 @@ KIND_NAME ?= policy-addon-ctrl1
 KIND_KUBECONFIG ?= $(PWD)/$(KIND_NAME).kubeconfig
 HUB_KUBECONFIG ?= $(PWD)/$(KIND_NAME).kubeconfig-internal
 MANAGED_CLUSTER_NAME ?= cluster1
+ifneq ($(KIND_VERSION), latest)
+	KIND_ARGS = --image kindest/node:$(KIND_VERSION)
+else
+	KIND_ARGS =
+endif
 
 .PHONY: kind-create-cluster
 kind-create-cluster: $(KIND_KUBECONFIG) ## Create a kind cluster.
@@ -191,7 +196,7 @@ kind-deploy-registration-operator-managed: $(REGISTRATION_OPERATOR) $(KIND_KUBEC
 
 .PHONY: kind-approve-cluster
 kind-approve-cluster: $(KIND_KUBECONFIG) ## Approve managed cluster in the kind cluster.
-	KUBECONFIG=$(KIND_KUBECONFIG) $(KUBEWAIT) -r "csr -l open-cluster-management.io/cluster-name=$(MANAGED_CLUSTER_NAME)" -m 60
+	KUBECONFIG=$(KIND_KUBECONFIG) $(KUBEWAIT) -r "csr -l open-cluster-management.io/cluster-name=$(MANAGED_CLUSTER_NAME)" -m 120
 	KUBECONFIG=$(KIND_KUBECONFIG) kubectl certificate approve "$$(KUBECONFIG=$(KIND_KUBECONFIG) kubectl get csr -l open-cluster-management.io/cluster-name=$(MANAGED_CLUSTER_NAME) -o name)"
 	KUBECONFIG=$(KIND_KUBECONFIG) $(KUBEWAIT) -r managedcluster/$(MANAGED_CLUSTER_NAME) -n open-cluster-management -m 60
 	KUBECONFIG=$(KIND_KUBECONFIG) kubectl patch managedcluster $(MANAGED_CLUSTER_NAME) -p='{"spec":{"hubAcceptsClient":true}}' --type=merge

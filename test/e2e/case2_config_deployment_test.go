@@ -3,8 +3,6 @@
 package e2e
 
 import (
-	"fmt"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,7 +17,7 @@ const (
 
 var _ = Describe("Test config-policy-controller deployment", func() {
 	It("should create the default config-policy-controller deployment on the managed cluster", func() {
-		for _, cluster := range managedClusterList {
+		for i, cluster := range managedClusterList {
 			logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
 			By(logPrefix + "deploying the default config-policy-controller managedclusteraddon")
 			Kubectl("apply", "-n", cluster.clusterName, "-f", case2ManagedClusterAddOnCR)
@@ -33,23 +31,31 @@ var _ = Describe("Test config-policy-controller deployment", func() {
 				deploy = GetWithTimeout(
 					cluster.clusterClient, gvrDeployment, case2DeploymentName, addonNamespace, true, 30,
 				)
-				spec := deploy.Object["spec"].(map[string]interface{})["template"].(map[string]interface{})["spec"]
-				containers := spec.(map[string]interface{})["containers"]
+				containers, _, _ := unstructured.NestedSlice(deploy.Object, "spec", "template", "spec", "containers")
 
-				return len(containers.([]interface{}))
+				return len(containers)
 			}, 60, 1).Should(Equal(1))
 
-			By(logPrefix + "verifying all replicas in config-policy-controller deployment are available")
-			Eventually(func() bool {
-				deploy = GetWithTimeout(
-					cluster.clusterClient, gvrDeployment, case2DeploymentName, addonNamespace, true, 30,
-				)
-				status := deploy.Object["status"]
-				replicas := status.(map[string]interface{})["replicas"]
-				availableReplicas := status.(map[string]interface{})["availableReplicas"]
+			if startupProbeInCluster(i) {
+				By(logPrefix + "verifying all replicas in config-policy-controller deployment are available")
+				Eventually(func() bool {
+					deploy = GetWithTimeout(
+						cluster.clusterClient, gvrDeployment, case2DeploymentName, addonNamespace, true, 30,
+					)
 
-				return (availableReplicas != nil) && replicas.(int64) == availableReplicas.(int64)
-			}, 240, 1).Should(Equal(true))
+					replicas, found, err := unstructured.NestedInt64(deploy.Object, "status", "replicas")
+					if !found || err != nil {
+						return false
+					}
+
+					available, found, err := unstructured.NestedInt64(deploy.Object, "status", "availableReplicas")
+					if !found || err != nil {
+						return false
+					}
+
+					return available == replicas
+				}, 240, 1).Should(Equal(true))
+			}
 
 			By(logPrefix + "verifying a running config-policy-controller pod")
 			Eventually(func() bool {
@@ -57,9 +63,10 @@ var _ = Describe("Test config-policy-controller deployment", func() {
 					LabelSelector: case2PodSelector,
 				}
 				pods := ListWithTimeoutByNamespace(cluster.clusterClient, gvrPod, opts, addonNamespace, 1, true, 30)
-				phase := pods.Items[0].Object["status"].(map[string]interface{})["phase"]
 
-				return phase.(string) == "Running"
+				phase, _, _ := unstructured.NestedString(pods.Items[0].Object, "status", "phase")
+
+				return phase == "Running"
 			}, 60, 1).Should(Equal(true))
 
 			By(logPrefix + "showing the config-policy-controller managedclusteraddon as available")
@@ -103,36 +110,32 @@ var _ = Describe("Test config-policy-controller deployment", func() {
 			By(logPrefix + "annotating the managedclusteraddon with the " + loggingLevelAnnotation + " annotation")
 			Kubectl("annotate", "-n", cluster.clusterName, "-f", case2ManagedClusterAddOnCR, loggingLevelAnnotation)
 
-			By(logPrefix + "verifying a new config-policy-controller pod is deployed")
-			opts := metav1.ListOptions{
-				LabelSelector: case2PodSelector,
-			}
-			_ = ListWithTimeoutByNamespace(cluster.clusterClient, gvrPod, opts, addonNamespace, 2, true, 30)
-
 			By(logPrefix + "verifying the pod has been deployed with a new logging level")
-			pods := ListWithTimeoutByNamespace(cluster.clusterClient, gvrPod, opts, addonNamespace, 1, true, 60)
-			phase := pods.Items[0].Object["status"].(map[string]interface{})["phase"]
+			Eventually(func(g Gomega) {
+				opts := metav1.ListOptions{
+					LabelSelector: case2PodSelector,
+				}
+				pods := ListWithTimeoutByNamespace(cluster.clusterClient, gvrPod, opts, addonNamespace, 1, true, 60)
+				phase := pods.Items[0].Object["status"].(map[string]interface{})["phase"]
 
-			Expect(phase.(string)).To(Equal("Running"))
-			containerList, _, err := unstructured.NestedSlice(pods.Items[0].Object, "spec", "containers")
-			if err != nil {
-				panic(err)
-			}
-			for _, container := range containerList {
-				if containerObj, ok := container.(map[string]interface{}); ok {
-					if Expect(containerObj).To(HaveKey("name")) && containerObj["name"] != case2DeploymentName {
+				g.Expect(phase.(string)).To(Equal("Running"))
+				containerList, _, err := unstructured.NestedSlice(pods.Items[0].Object, "spec", "containers")
+				g.Expect(err).To(BeNil())
+				for _, container := range containerList {
+					containerObj, ok := container.(map[string]interface{})
+					g.Expect(ok).To(BeTrue())
+
+					if g.Expect(containerObj).To(HaveKey("name")) && containerObj["name"] != case2DeploymentName {
 						continue
 					}
-					if Expect(containerObj).To(HaveKey("args")) {
+					if g.Expect(containerObj).To(HaveKey("args")) {
 						args := containerObj["args"]
 						Expect(args).To(ContainElement("--log-encoder=console"))
 						Expect(args).To(ContainElement("--log-level=8"))
 						Expect(args).To(ContainElement("--v=6"))
 					}
-				} else {
-					panic(fmt.Errorf("containerObj type assertion failed"))
 				}
-			}
+			}, 180, 10).Should(Succeed())
 
 			By(logPrefix +
 				"removing the config-policy-controller deployment when the ManagedClusterAddOn CR is removed")
