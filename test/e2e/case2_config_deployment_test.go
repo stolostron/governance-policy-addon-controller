@@ -130,9 +130,9 @@ var _ = Describe("Test config-policy-controller deployment", func() {
 					}
 					if g.Expect(containerObj).To(HaveKey("args")) {
 						args := containerObj["args"]
-						Expect(args).To(ContainElement("--log-encoder=console"))
-						Expect(args).To(ContainElement("--log-level=8"))
-						Expect(args).To(ContainElement("--v=6"))
+						g.Expect(args).To(ContainElement("--log-encoder=console"))
+						g.Expect(args).To(ContainElement("--log-level=8"))
+						g.Expect(args).To(ContainElement("--v=6"))
 					}
 				}
 			}, 180, 10).Should(Succeed())
