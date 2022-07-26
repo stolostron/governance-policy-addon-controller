@@ -26,6 +26,9 @@ jobs:
         kind:
           - 'v1.19.16'
           - 'latest'
+        hosted_mode:
+          - "true"
+          - "false"
     name: KinD tests
     steps:
     - name: Checkout 
@@ -40,60 +43,33 @@ jobs:
       with:
         go-version: ${{ matrix.go }}
 
-    - name: Verify modules
-      run: |
-        go mod verify
-
-    - name: Verify format
-      run: |
-        make fmt
-        git diff --exit-code
-        make lint
-
     - name: Create KinD Cluster (${{ matrix.kind }}) and deploy components
       env:
         KIND_VERSION: ${{ matrix.kind }}
+        HOSTED_MODE: ${{ matrix.hosted_mode }}
       run: |
         ./build/manage-clusters.sh
 
-    - name: Unit and Integration Tests
-      run: |
-        make test
-
-    - name: E2E Tests
+    - if: matrix.hosted_mode == 'false'
+      name: E2E tests
       run: |
         export GOPATH=$(go env GOPATH)
         make wait-for-work-agent
         make e2e-test
-    
+
+    - if: matrix.hosted_mode == 'true'
+      name: E2E tests hosted mode
+      run: |
+        export GOPATH=$(go env GOPATH)
+        make wait-for-work-agent
+        make e2e-test-hosted-mode
+
     - name: Debug
       if: ${{ failure() }}
       run: |
         RUN_MODE="debug" ./build/manage-clusters.sh
 
-    - name: Gosec
-      if: |
-        github.event_name == 'push' &&
-        github.repository_owner == 'stolostron'  &&
-        matrix.kind == 'latest'
-      run: |
-        make gosec-scan
-
-    - name: SonarCloud Analysis
-      if: |
-        github.event_name == 'push' &&
-        github.repository_owner == 'stolostron'  &&
-        matrix.kind == 'latest'
-      uses: sonarsource/sonarcloud-github-action@master
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      with:
-        projectBaseDir: governance-policy-addon-controller
-        args: >
-          --debug
-
-    - name: Clean up cluster
+    - name: Clean up clusters
       if: ${{ always() }}
       run: |
         RUN_MODE="delete" ./build/manage-clusters.sh
