@@ -123,6 +123,17 @@ rules:
   - watch
 - apiGroups:
   - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
   resourceNames:
   - policy-encryption-key
   resources:
@@ -203,19 +214,9 @@ rules:
   - manifestworks
   verbs:
   - create
+  - delete
   - get
   - list
-  - watch
-- apiGroups:
-  - work.open-cluster-management.io
-  resourceNames:
-  - addon-cert-policy-controller-deploy
-  - addon-config-policy-controller-deploy
-  - addon-governance-policy-framework-deploy
-  - addon-iam-policy-controller-deploy
-  resources:
-  - manifestworks
-  verbs:
-  - delete
   - patch
   - update
+  - watch
