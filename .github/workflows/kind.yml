@@ -63,27 +63,20 @@ jobs:
         make wait-for-work-agent
         make e2e-test-hosted-mode
 
-    - name: Test Coverage Verification
-      if: |
-        github.event_name == 'pull_request' &&
-        matrix.hosted_mode == 'false'
-      run: |
-        make test-coverage
-        make coverage-verify
-
     - name: Test Coverage and Report Generation
-      if: ${{ github.event_name == 'push' }}
+      if: matrix.hosted_mode == 'false'
       run: |
         make test-coverage | tee report_unit.json
+        make coverage-verify
         make gosec-scan
         cat gosec.json
 
     - name: SonarCloud Analysis
       if: |
-        github.event_name == 'push' &&
-        github.repository_owner == 'stolostron' &&
         matrix.kind == 'latest' &&
-        matrix.hosted_mode == 'false'
+        github.repository_owner == 'stolostron' &&
+        matrix.hosted_mode == 'false' &&
+        (github.event_name == 'push' || github.event_name == 'pull_request')
       uses: sonarsource/sonarcloud-github-action@master
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
