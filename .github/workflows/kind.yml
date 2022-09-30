@@ -53,37 +53,37 @@ jobs:
       run: |
         ./build/manage-clusters.sh
 
-    - name: Unit and Integration Tests
-      run: |
-        make test
-
     - name: E2E Tests
       run: |
         export GOPATH=$(go env GOPATH)
         make wait-for-work-agent
         make e2e-test
 
-    - name: Gosec
-      if: |
-        github.event_name == 'push' &&
-        github.repository_owner == 'stolostron'  &&
-        matrix.kind == 'latest'
+    - name: Test Coverage and Report Generation
       run: |
+        make test | tee report_unit.json
         make gosec-scan
 
-    - name: SonarCloud Analysis
+    - name: Store the GitHub triggering event for the sonarcloud workflow
       if: |
-        github.event_name == 'push' &&
-        github.repository_owner == 'stolostron'  &&
-        matrix.kind == 'latest'
-      uses: sonarsource/sonarcloud-github-action@master
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        matrix.kind == 'latest' &&
+        github.repository_owner == 'stolostron'
+      run: |
+        cat <<EOF > event.json
+        ${{ toJSON(github.event) }}
+        EOF
+
+    - name: Upload artifacts for the sonarcloud workflow
+      if: |
+        matrix.kind == 'latest' &&
+        github.repository_owner == 'stolostron'
+      uses: actions/upload-artifact@v3
       with:
-        projectBaseDir: governance-policy-addon-controller
-        args: >
-          --debug
+        name: artifacts
+        path: |
+          governance-policy-addon-controller/coverage*.out
+          governance-policy-addon-controller/event.json
+          governance-policy-addon-controller/gosec.json
 
     - name: Clean up cluster
       if: ${{ always() }}
