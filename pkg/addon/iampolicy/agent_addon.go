@@ -18,7 +18,8 @@ const (
 	addonName = "iam-policy-controller"
 )
 
-//FS go:embed
+// FS go:embed
+//
 //go:embed manifests
 //go:embed manifests/managedclusterchart
 //go:embed manifests/managedclusterchart/templates/_helpers.tpl
