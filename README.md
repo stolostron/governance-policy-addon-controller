@@ -25,9 +25,7 @@ The addons managed by this controller are:
 - The "iam-policy-controller" consisting of the
   [IAM Policy Controller](https://github.com/stolostron/iam-policy-controller).
 - The "governance-policy-framework" consisting of the
-  [Policy Spec Sync](https://github.com/stolostron/governance-policy-spec-sync), the
-  [Policy Status Sync](https://github.com/stolostron/governance-policy-status-sync), and the
-  [Policy Template Sync](https://github.com/stolostron/governance-policy-template-sync).
+  [Governance Policy Framework Addon](https://github.com/stolostron/governance-policy-framework-addon).
 
 Go to the [Contributing guide](CONTRIBUTING.md) to learn how to get involved.
 
