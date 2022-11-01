@@ -66,9 +66,9 @@ cat > pkg/addon/iampolicy/manifests/managedclusterchart/templates/policy.open-cl
 # Copyright Contributors to the Open Cluster Management project
 
 {{- if semverCompare "< 1.16.0" .Capabilities.KubeVersion.Version }}
-$(cat .go/iam-policy-crd-v1beta1.yaml)
+$(yq e "$addLabelsExpression" .go/iam-policy-crd-v1beta1.yaml)
 {{ else }}
-$(cat .go/iam-policy-crd-v1.yaml)
+$(yq e "$addLabelsExpression" .go/iam-policy-crd-v1.yaml)
 {{- end }}
 EOF
 

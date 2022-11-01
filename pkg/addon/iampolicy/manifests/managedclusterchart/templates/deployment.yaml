@@ -10,6 +10,7 @@ metadata:
     chart: {{ include "controller.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
+    addon.open-cluster-management.io/hosted-manifest-location: hosting
 spec:
   replicas: {{ .Values.replicas }}
   selector:
@@ -44,9 +45,16 @@ spec:
         - --log-encoder={{ .Values.args.logEncoder }}
         - --log-level={{ .Values.args.logLevel }}
         - --v={{ .Values.args.pkgLogLevel }}
+        {{- if eq .Values.installMode "Hosted" }}
+        - --target-kubeconfig-path=/var/run/managed-kubeconfig/kubeconfig
+        {{- end }}
         env:
         - name: WATCH_NAMESPACE
-          value: "{{ .Values.clusterName }}"
+          {{- if eq .Values.installMode "Hosted" }}
+          value: {{ .Release.Namespace }}
+          {{- else }}
+          value: {{ .Values.clusterName }}
+          {{- end }}
         - name: POD_NAME
           valueFrom:
             fieldRef:
@@ -101,12 +109,22 @@ spec:
           mountPath: "/tmp"
         - name: klusterlet-config
           mountPath: /var/run/klusterlet
+        {{- if eq .Values.installMode "Hosted" }}
+        - mountPath: "/var/run/managed-kubeconfig"
+          name: managed-kubeconfig-secret
+          readOnly: true
+        {{- end }}
       volumes:
       - name: tmp
         emptyDir: {}
       - name: klusterlet-config
         secret:
           secretName: {{ .Values.hubKubeConfigSecret }}
+      {{- if eq .Values.installMode "Hosted" }}
+      - name: managed-kubeconfig-secret
+        secret:
+          secretName: {{ .Values.managedKubeConfigSecret }}
+      {{- end }}
       {{- if .Values.global.imagePullSecret }}
       imagePullSecrets:
       - name: {{ .Values.global.imagePullSecret }}
