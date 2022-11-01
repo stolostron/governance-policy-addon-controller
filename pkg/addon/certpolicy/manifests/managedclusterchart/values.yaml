@@ -35,6 +35,7 @@ tolerations:
   effect: NoSchedule
 
 clusterName: null
+managedKubeConfigSecret: null
 
 global:
   imagePullPolicy: IfNotPresent

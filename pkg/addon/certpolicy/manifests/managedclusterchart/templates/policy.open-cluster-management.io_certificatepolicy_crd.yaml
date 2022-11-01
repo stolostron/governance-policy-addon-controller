@@ -8,6 +8,8 @@ metadata:
     controller-gen.kubebuilder.io/version: v0.6.1
   creationTimestamp: null
   name: certificatepolicies.policy.open-cluster-management.io
+  labels:
+    addon.open-cluster-management.io/hosted-manifest-location: hosting
 spec:
   group: policy.open-cluster-management.io
   names:
