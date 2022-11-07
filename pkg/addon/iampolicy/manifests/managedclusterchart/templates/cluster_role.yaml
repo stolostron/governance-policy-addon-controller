@@ -58,7 +58,7 @@ rules:
   - get
   - patch
   - update
-{{- if eq .Values.installMode "Hosted" }}
+{{- if ne .Values.installMode "Hosted" }}
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:
