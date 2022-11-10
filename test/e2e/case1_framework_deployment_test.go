@@ -36,6 +36,7 @@ var _ = Describe("Test framework deployment", func() {
 			Expect(deploy).NotTo(BeNil())
 
 			checkContainersAndAvailability(cluster, i+1)
+			checkArgs(cluster, "--leader-elect=false")
 
 			By(logPrefix + "removing the framework deployment when the ManagedClusterAddOn CR is removed")
 			Kubectl("delete", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR)

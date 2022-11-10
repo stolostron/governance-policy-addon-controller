@@ -130,6 +130,7 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 						g.Expect(args).To(ContainElement("--log-encoder=console"))
 						g.Expect(args).To(ContainElement("--log-level=8"))
 						g.Expect(args).To(ContainElement("--v=6"))
+						g.Expect(args).To(ContainElement("--leader-elect=false"))
 					}
 				}
 			}, 180, 10).Should(Succeed())

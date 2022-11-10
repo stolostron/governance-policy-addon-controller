@@ -37,6 +37,9 @@ spec:
         args:
           - '--hub-cluster-configfile=/var/run/klusterlet/kubeconfig'
           - '--health-probe-bind-address=:8081'
+          {{- if eq (.Values.replicas | int) 1 }}
+          - '--leader-elect=false'
+          {{- end }}
           {{- if semverCompare "< 1.14.0" .Capabilities.KubeVersion.Version }}
           - --legacy-leader-elect=true
           {{- end }}
@@ -105,6 +108,9 @@ spec:
         command: ["governance-policy-status-sync"]
         args:
           - '--enable-lease=true'
+          {{- if eq (.Values.replicas | int) 1 }}
+          - '--leader-elect=false'
+          {{- end }}
           - '--hub-cluster-configfile=/var/run/klusterlet/kubeconfig'
           - '--health-probe-bind-address=:8082'
           {{- if semverCompare "< 1.14.0" .Capabilities.KubeVersion.Version }}
@@ -177,6 +183,9 @@ spec:
         imagePullPolicy: "{{ .Values.global.imagePullPolicy }}"
         command: ["governance-policy-template-sync"]
         args:
+          {{- if eq (.Values.replicas | int) 1 }}
+          - '--leader-elect=false'
+          {{- end }}
           {{- if semverCompare "< 1.14.0" .Capabilities.KubeVersion.Version }}
           - --legacy-leader-elect=true
           {{- end }}
