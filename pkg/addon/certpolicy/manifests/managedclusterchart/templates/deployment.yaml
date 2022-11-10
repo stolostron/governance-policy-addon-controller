@@ -41,6 +41,9 @@ spec:
         {{- if .Values.args.defaultDuration }}
         - --default-duration={{ .Values.args.defaultDuration }}
         {{- end }}
+        {{- if eq (.Values.replicas | int) 1 }}
+        - '--leader-elect=false'
+        {{- end }}
         {{- if semverCompare "< 1.14.0" .Capabilities.KubeVersion.Version }}
         - --legacy-leader-elect=true
         {{- end }}
