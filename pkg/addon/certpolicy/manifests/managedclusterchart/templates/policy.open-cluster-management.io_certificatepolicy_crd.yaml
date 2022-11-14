@@ -47,6 +47,7 @@ spec:
               additionalProperties:
                 minLength: 1
                 type: string
+              description: Restrict the secrets that will be checked to the ones that contain these labels.
               type: object
             maximumCADuration:
               description: Maximum CA duration for a signing certificate, longer duration is considered non-compliant. Golang's time units only.
@@ -103,7 +104,7 @@ spec:
                   type: object
               type: object
             remediationAction:
-              description: enforce, inform
+              description: Only Inform is currently supported. Setting this to Enforce will have the same effect as Inform.
               enum:
                 - Inform
                 - inform
@@ -224,6 +225,7 @@ spec:
                   additionalProperties:
                     minLength: 1
                     type: string
+                  description: Restrict the secrets that will be checked to the ones that contain these labels.
                   type: object
                 maximumCADuration:
                   description: Maximum CA duration for a signing certificate, longer duration is considered non-compliant. Golang's time units only.
@@ -284,7 +286,7 @@ spec:
                       type: object
                   type: object
                 remediationAction:
-                  description: enforce, inform
+                  description: Only Inform is currently supported. Setting this to Enforce will have the same effect as Inform.
                   enum:
                     - Inform
                     - inform
