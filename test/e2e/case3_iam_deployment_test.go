@@ -15,9 +15,10 @@ import (
 )
 
 const (
-	case3ManagedClusterAddOnCR string = "../resources/iam_policy_addon_cr.yaml"
-	case3DeploymentName        string = "iam-policy-controller"
-	case3PodSelector           string = "app=iam-policy-controller"
+	case3ManagedClusterAddOnCR    string = "../resources/iam_policy_addon_cr.yaml"
+	case3ClusterManagementAddOnCR string = "../resources/iam_policy_clustermanagementaddon.yaml"
+	case3DeploymentName           string = "iam-policy-controller"
+	case3PodSelector              string = "app=iam-policy-controller"
 )
 
 func verifyIamPolicyDeployment(
@@ -98,6 +99,55 @@ var _ = Describe("Test iam-policy-controller deployment", func() {
 			)
 			Expect(deploy).To(BeNil())
 		}
+	})
+
+	It("should create a iam-policy-controller deployment with node selector on the managed cluster", func() {
+		By("Creating the AddOnDeploymentConfig")
+		Kubectl("apply", "-f", addOnDeplomentConfigCR)
+		By("Creating the iam-policy-controller ClusterManagementAddOn to use the AddOnDeploymentConfig")
+		Kubectl("apply", "-f", case3ClusterManagementAddOnCR)
+
+		for i, cluster := range managedClusterList {
+			logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
+			By(logPrefix + "deploying the default iam-policy-controller managedclusteraddon")
+			Kubectl("apply", "-n", cluster.clusterName, "-f", case3ManagedClusterAddOnCR)
+
+			verifyIamPolicyDeployment(logPrefix, cluster.clusterClient, cluster.clusterName, addonNamespace, i)
+
+			By(logPrefix + "verifying the nodeSelector")
+			deploy := GetWithTimeout(
+				cluster.clusterClient, gvrDeployment, case3DeploymentName, addonNamespace, true, 30,
+			)
+
+			nodeSelector, _, _ := unstructured.NestedStringMap(
+				deploy.Object, "spec", "template", "spec", "nodeSelector",
+			)
+			Expect(nodeSelector).To(Equal(map[string]string{"kubernetes.io/os": "linux"}))
+
+			By(logPrefix + "verifying the tolerations")
+			tolerations, _, _ := unstructured.NestedSlice(deploy.Object, "spec", "template", "spec", "tolerations")
+			Expect(tolerations).To(HaveLen(1))
+			expected := map[string]interface{}{
+				"key":      "dedicated",
+				"operator": "Equal",
+				"value":    "something-else",
+				"effect":   "NoSchedule",
+			}
+			Expect(tolerations[0]).To(Equal(expected))
+
+			By(logPrefix +
+				"removing the iam-policy-controller deployment when the ManagedClusterAddOn CR is removed")
+			Kubectl("delete", "-n", cluster.clusterName, "-f", case3ManagedClusterAddOnCR)
+			deploy = GetWithTimeout(
+				cluster.clusterClient, gvrDeployment, case2DeploymentName, addonNamespace, false, 30,
+			)
+			Expect(deploy).To(BeNil())
+		}
+
+		By("Deleting the AddOnDeploymentConfig")
+		Kubectl("delete", "-f", addOnDeplomentConfigCR)
+		By("Deleting the iam-policy-controller ClusterManagementAddOn to use the AddOnDeploymentConfig")
+		Kubectl("delete", "-f", case3ClusterManagementAddOnCR)
 	})
 
 	It("should create the default iam-policy-controller deployment in hosted mode", Label("hosted-mode"), func() {

@@ -2,6 +2,7 @@ package certpolicy
 
 import (
 	"embed"
+	"fmt"
 	"os"
 
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
@@ -9,6 +10,7 @@ import (
 	"open-cluster-management.io/addon-framework/pkg/addonmanager"
 	"open-cluster-management.io/addon-framework/pkg/agent"
 	addonapiv1alpha1 "open-cluster-management.io/api/addon/v1alpha1"
+	addonv1alpha1client "open-cluster-management.io/api/client/addon/clientset/versioned"
 	clusterv1 "open-cluster-management.io/api/cluster/v1"
 
 	policyaddon "open-cluster-management.io/governance-policy-addon-controller/pkg/addon"
@@ -42,7 +44,6 @@ func getValues(cluster *clusterv1.ManagedCluster,
 			ImageOverrides: map[string]string{
 				"cert_policy_controller": os.Getenv("CERT_POLICY_CONTROLLER_IMAGE"),
 			},
-			NodeSelector: map[string]string{},
 			ProxyConfig: map[string]string{
 				"HTTP_PROXY":  "",
 				"HTTPS_PROXY": "",
@@ -72,8 +73,20 @@ func GetAgentAddon(controllerContext *controllercmd.ControllerContext) (agent.Ag
 		agentPermissionFiles,
 		FS)
 
+	addonClient, err := addonv1alpha1client.NewForConfig(controllerContext.KubeConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve addon client: %w", err)
+	}
+
 	return addonfactory.NewAgentAddonFactory(addonName, FS, "manifests/managedclusterchart").
-		WithGetValuesFuncs(getValues, addonfactory.GetValuesFromAddonAnnotation).
+		WithConfigGVRs(addonfactory.AddOnDeploymentConfigGVR).
+		WithGetValuesFuncs(
+			addonfactory.GetAddOnDeloymentConfigValues(
+				addonfactory.NewAddOnDeloymentConfigGetter(addonClient), addonfactory.ToAddOnNodePlacementValues,
+			),
+			getValues,
+			addonfactory.GetValuesFromAddonAnnotation,
+		).
 		WithAgentRegistrationOption(registrationOption).
 		WithAgentHostedModeEnabledOption().
 		BuildHelmAgentAddon()
