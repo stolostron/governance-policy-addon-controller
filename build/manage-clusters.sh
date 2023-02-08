@@ -20,6 +20,12 @@ if [[ "${MANAGED_CLUSTER_COUNT}" -gt 1 ]] && [[ "${HOSTED_MODE}" == "true" ]]; t
   exit 1
 fi
 
+HUB_KIND_VERSION=$KIND_VERSION
+if [[ "${KIND_VERSION}" == "minimum" ]]; then
+  # The hub supports less Kubernetes versions than the managed cluster.
+  HUB_KIND_VERSION=v1.23.13
+fi
+
 KIND_PREFIX=${KIND_PREFIX:-"policy-addon-ctrl"}
 CLUSTER_PREFIX=${CLUSTER_PREFIX:-"cluster"}
 
@@ -34,10 +40,10 @@ case ${RUN_MODE} in
     make e2e-debug
     ;;
   create)
-    make kind-deploy-controller
+    KIND_VERSION=$HUB_KIND_VERSION make kind-deploy-controller
     ;;
   create-dev)
-    make kind-prep-ocm
+    KIND_VERSION=$HUB_KIND_VERSION make kind-prep-ocm
     ;;
   deploy-addons)
     make kind-deploy-addons-hub
