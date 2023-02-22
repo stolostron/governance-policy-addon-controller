@@ -172,6 +172,32 @@ else
 	KIND_ARGS =
 endif
 
+.PHONY: kind-bootstrap-cluster
+kind-bootstrap-cluster: ## Bootstrap Kind clusters and load clusters with locally built images.
+	RUN_MODE="create" ./build/manage-clusters.sh
+
+.PHONY: kind-bootstrap-cluster-dev
+kind-bootstrap-cluster-dev: ## Bootstrap Kind clusters without loading images so code can be run locally.
+	RUN_MODE="create-dev" ./build/manage-clusters.sh
+
+.PHONY: kind-bootstrap-delete-clusters
+kind-bootstrap-delete-clusters: ## Delete clusters created from a bootstrap target.
+	RUN_MODE="delete" ./build/manage-clusters.sh
+
+.PHONY: kind-bootstrap-deploy-addons
+kind-bootstrap-deploy-addons: ## Deploy addons to bootstrap clusters.
+	RUN_MODE="deploy-addons" ./build/manage-clusters.sh
+
+.PHONY: kind-deploy-addons-hub
+kind-deploy-addons-hub: kind-deploy-addons-managed ## Apply ManagedClusterAddon manifests to hub to deploy governance addons to a managed hub cluster.
+	KUBECONFIG=$(KIND_KUBECONFIG) kubectl annotate ManagedClusterAddon governance-policy-framework addon.open-cluster-management.io/on-multicluster-hub='true' -n $(MANAGED_CLUSTER_NAME)
+
+.PHONY: kind-deploy-addons-managed
+kind-deploy-addons-managed: ## Apply ManagedClusterAddon manifests to hub to deploy governance addons to a managed cluster.
+	@echo "Creating ManagedClusterAddon for managed cluster $(MANAGED_CLUSTER_NAME)"
+	KUBECONFIG=$(KIND_KUBECONFIG) kubectl apply -f test/resources/config_policy_addon_cr.yaml -n $(MANAGED_CLUSTER_NAME)
+	KUBECONFIG=$(KIND_KUBECONFIG) kubectl apply -f test/resources/framework_addon_cr.yaml -n $(MANAGED_CLUSTER_NAME)
+
 .PHONY: kind-create-cluster
 kind-create-cluster: $(KIND_KUBECONFIG) ## Create a kind cluster.
 
@@ -184,7 +210,7 @@ $(KIND_KUBECONFIG):
 
 .PHONY: kind-delete-cluster
 kind-delete-cluster: ## Delete a kind cluster.
-	kind delete cluster --name $(KIND_NAME) || true
+	-kind delete cluster --name $(KIND_NAME)
 	-rm $(KIND_KUBECONFIG)
 	-rm $(KIND_KUBECONFIG_INTERNAL)
 
@@ -192,8 +218,6 @@ REGISTRATION_OPERATOR = $(PWD)/.go/registration-operator
 $(REGISTRATION_OPERATOR):
 	@mkdir -p .go
 	git clone --depth 1 https://github.com/open-cluster-management-io/registration-operator.git .go/registration-operator
-	# A workaround for https://github.com/open-cluster-management-io/registration-operator/pull/266
-	sed -i 's/-e "s,mode: Default,mode: Detached,"/-e "s,mode: Default,mode: Detached," -e "s,cluster1,$$(MANAGED_CLUSTER_NAME),"/' .go/registration-operator/Makefile
 
 .PHONY: kind-deploy-registration-operator-hub
 kind-deploy-registration-operator-hub: $(REGISTRATION_OPERATOR) $(KIND_KUBECONFIG) ## Deploy the ocm registration operator to the kind cluster.
@@ -238,7 +262,7 @@ kind-load-image: build-images $(KIND_KUBECONFIG) ## Build and load the docker im
 kind-regenerate-controller: manifests generate kustomize $(KIND_KUBECONFIG) ## Refresh (or initially deploy) the policy-addon-controller.
 	cp config/default/kustomization.yaml config/default/kustomization.yaml.tmp
 	cd config/default && $(KUSTOMIZE) edit set image policy-addon-image=$(IMAGE_NAME_AND_VERSION)
-	KUBECONFIG=$(KIND_KUBECONFIG) $(KUSTOMIZE) build config/default | kubectl apply -f -
+	$(KUSTOMIZE) build config/default | KUBECONFIG=$(KIND_KUBECONFIG) kubectl apply -f -
 	mv config/default/kustomization.yaml.tmp config/default/kustomization.yaml
 	KUBECONFIG=$(KIND_KUBECONFIG) kubectl delete -n $(CONTROLLER_NAMESPACE) pods -l=app=governance-policy-addon-controller
 
