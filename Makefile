@@ -1,11 +1,17 @@
 PWD := $(shell pwd)
 LOCAL_BIN ?= $(PWD)/bin
 
+RELEASE_BRANCH ?= main
+ifneq ($(RELEASE_BRANCH), main)
+  TAG ?= latest-$(subst release-,,$(RELEASE_BRANCH))
+else
+  TAG ?= latest
+endif
+
 # Image URL to use all building/pushing image targets;
 # Use your own docker registry and image name for dev/test by overridding the IMG and REGISTRY environment variable.
 IMG ?= $(shell cat COMPONENT_NAME 2> /dev/null)
 REGISTRY ?= quay.io/stolostron
-TAG ?= latest-2.8
 VERSION ?= $(shell cat COMPONENT_VERSION 2> /dev/null)
 IMAGE_NAME_AND_VERSION ?= $(REGISTRY)/$(IMG):$(VERSION)
 
@@ -227,7 +233,7 @@ kind-deploy-registration-operator-hub: $(REGISTRATION_OPERATOR) $(KIND_KUBECONFI
 	KUBECONFIG=$(KIND_KUBECONFIG) $(KUBEWAIT) -r deploy/cluster-manager -n open-cluster-management -c condition=Available -m 90
 	KUBECONFIG=$(KIND_KUBECONFIG) $(KUBEWAIT) -r deploy/cluster-manager-placement-controller -n open-cluster-management-hub -c condition=Available -m 90
 	@echo installing Policy CRD on hub
-	KUBECONFIG=$(KIND_KUBECONFIG) kubectl apply -f https://raw.githubusercontent.com/stolostron/governance-policy-propagator/main/deploy/crds/policy.open-cluster-management.io_policies.yaml
+	KUBECONFIG=$(KIND_KUBECONFIG) kubectl apply -f https://raw.githubusercontent.com/stolostron/governance-policy-propagator/$(RELEASE_BRANCH)/deploy/crds/policy.open-cluster-management.io_policies.yaml
 
 .PHONY: kind-deploy-registration-operator-managed
 kind-deploy-registration-operator-managed: $(REGISTRATION_OPERATOR) $(KIND_KUBECONFIG) ## Deploy the ocm registration operator to the kind cluster.
