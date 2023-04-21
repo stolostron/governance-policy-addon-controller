@@ -31,15 +31,14 @@ func verifyIamPolicyDeployment(
 	)
 	Expect(deploy).NotTo(BeNil())
 
-	Eventually(func() int {
+	Eventually(func() []interface{} {
 		deploy = GetWithTimeout(
 			client, gvrDeployment, case3DeploymentName, namespace, true, 30,
 		)
-		spec := deploy.Object["spec"].(map[string]interface{})["template"].(map[string]interface{})["spec"]
-		containers := spec.(map[string]interface{})["containers"]
+		containers, _, _ := unstructured.NestedSlice(deploy.Object, "spec", "template", "spec", "containers")
 
-		return len(containers.([]interface{}))
-	}, 60, 1).Should(Equal(1))
+		return containers
+	}, 60, 1).Should(HaveLen(1))
 
 	if startupProbeInCluster(clusterNum) {
 		By(logPrefix + "Verifying all replicas in iam-policy-controller deployment are available")
@@ -63,15 +62,15 @@ func verifyIamPolicyDeployment(
 	}
 
 	By(logPrefix + "Verifying a running iam-policy-controller pod")
-	Eventually(func() bool {
+	Eventually(func() string {
 		opts := metav1.ListOptions{
 			LabelSelector: case3PodSelector,
 		}
 		pods := ListWithTimeoutByNamespace(client, gvrPod, opts, namespace, 1, true, 30)
 		phase, _, _ := unstructured.NestedString(pods.Items[0].Object, "status", "phase")
 
-		return phase == "Running"
-	}, 60, 1).Should(Equal(true))
+		return phase
+	}, 60, 1).Should(Equal("Running"))
 
 	By(logPrefix + "Showing the iam-policy-controller managedclusteraddon as available")
 	Eventually(func() bool {
@@ -180,12 +179,12 @@ var _ = Describe("Test iam-policy-controller deployment", func() {
 			err := hubClient.Resource(gvrSecret).Namespace(installNamespace).Delete(
 				context.TODO(), "iam-policy-controller-managed-kubeconfig", metav1.DeleteOptions{},
 			)
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 
 			err = clientDynamic.Resource(gvrManagedClusterAddOn).Namespace(cluster.clusterName).Delete(
 				context.TODO(), case3ManagedClusterAddOnName, metav1.DeleteOptions{},
 			)
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 
 			deploy := GetWithTimeout(
 				hubClient, gvrDeployment, case3DeploymentName, installNamespace, false, 30,
@@ -232,7 +231,7 @@ var _ = Describe("Test iam-policy-controller deployment", func() {
 				err := clientDynamic.Resource(gvrManagedClusterAddOn).Namespace(cluster.clusterName).Delete(
 					context.TODO(), case3ManagedClusterAddOnName, metav1.DeleteOptions{},
 				)
-				Expect(err).To(BeNil())
+				Expect(err).ToNot(HaveOccurred())
 
 				By(logPrefix +
 					"Verifying controller deployment is removed when the ManagedClusterAddOn CR is removed")
@@ -250,13 +249,13 @@ var _ = Describe("Test iam-policy-controller deployment", func() {
 				err = hubClient.Resource(gvrSecret).Namespace(installNamespace).Delete(
 					context.TODO(), "external-managed-kubeconfig", metav1.DeleteOptions{},
 				)
-				Expect(err).To(BeNil())
+				Expect(err).ToNot(HaveOccurred())
 
 				By(logPrefix + "Cleaning up the install namespace")
 				err = hubClient.Resource(gvrNamespace).Delete(
 					context.TODO(), installNamespace, metav1.DeleteOptions{},
 				)
-				Expect(err).To(BeNil())
+				Expect(err).ToNot(HaveOccurred())
 
 				namespace = GetWithTimeout(hubClient, gvrNamespace, installNamespace, "", false, 30)
 				Expect(namespace).To(BeNil())
@@ -299,7 +298,7 @@ var _ = Describe("Test iam-policy-controller deployment", func() {
 
 				g.Expect(phase.(string)).To(Equal("Running"))
 				containerList, _, err := unstructured.NestedSlice(pods.Items[0].Object, "spec", "containers")
-				g.Expect(err).To(BeNil())
+				g.Expect(err).ToNot(HaveOccurred())
 				for _, container := range containerList {
 					containerObj, ok := container.(map[string]interface{})
 					g.Expect(ok).To(BeTrue())
