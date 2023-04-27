@@ -169,9 +169,10 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 
 			installAddonInHostedMode(
 				logPrefix, hubClient, case4ManagedClusterAddOnName,
-				cluster.clusterName, managedClusterList[0].clusterName, installNamespace)
+				cluster.clusterName, hubClusterConfig.clusterName, installNamespace)
 
-			verifyCertPolicyDeployment(logPrefix, hubClient, cluster.clusterName, installNamespace, i)
+			// Use i+1 since the for loop ranges over a slice skipping first index
+			verifyCertPolicyDeployment(logPrefix, hubClient, cluster.clusterName, installNamespace, i+1)
 
 			By(logPrefix +
 				"removing the cert-policy-controller deployment when the ManagedClusterAddOn CR is removed")
@@ -222,9 +223,10 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 
 				installAddonInHostedMode(
 					logPrefix, hubClient, case4ManagedClusterAddOnName,
-					cluster.clusterName, managedClusterList[0].clusterName, installNamespace)
+					cluster.clusterName, hubClusterConfig.clusterName, installNamespace)
 
-				verifyCertPolicyDeployment(logPrefix, hubClient, cluster.clusterName, installNamespace, i)
+				// Use i+1 since the for loop ranges over a slice skipping first index
+				verifyCertPolicyDeployment(logPrefix, hubClient, cluster.clusterName, installNamespace, i+1)
 
 				By(logPrefix + "Removing the ManagedClusterAddOn CR")
 				err := clientDynamic.Resource(gvrManagedClusterAddOn).Namespace(cluster.clusterName).Delete(
