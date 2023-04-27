@@ -170,9 +170,10 @@ var _ = Describe("Test iam-policy-controller deployment", func() {
 
 			installAddonInHostedMode(
 				logPrefix, hubClient, case3ManagedClusterAddOnName,
-				cluster.clusterName, managedClusterList[0].clusterName, installNamespace)
+				cluster.clusterName, hubClusterConfig.clusterName, installNamespace)
 
-			verifyIamPolicyDeployment(logPrefix, hubClient, cluster.clusterName, installNamespace, i)
+			// Use i+1 since the for loop ranges over a slice skipping first index
+			verifyIamPolicyDeployment(logPrefix, hubClient, cluster.clusterName, installNamespace, i+1)
 
 			By(logPrefix +
 				"removing the iam-policy-controller deployment when the ManagedClusterAddOn CR is removed")
@@ -223,9 +224,10 @@ var _ = Describe("Test iam-policy-controller deployment", func() {
 
 				installAddonInHostedMode(
 					logPrefix, hubClient, case3ManagedClusterAddOnName,
-					cluster.clusterName, managedClusterList[0].clusterName, installNamespace)
+					cluster.clusterName, hubClusterConfig.clusterName, installNamespace)
 
-				verifyIamPolicyDeployment(logPrefix, hubClient, cluster.clusterName, installNamespace, i)
+				// Use i+1 since the for loop ranges over a slice skipping first index
+				verifyIamPolicyDeployment(logPrefix, hubClient, cluster.clusterName, installNamespace, i+1)
 
 				By(logPrefix + "Removing the ManagedClusterAddOn CR")
 				err := clientDynamic.Resource(gvrManagedClusterAddOn).Namespace(cluster.clusterName).Delete(
