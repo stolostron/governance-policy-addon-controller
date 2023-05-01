@@ -1,6 +1,7 @@
 package iampolicy
 
 import (
+	"context"
 	"embed"
 	"fmt"
 	"os"
@@ -34,7 +35,7 @@ var agentPermissionFiles = []string{
 	"manifests/hubpermissions/rolebinding.yaml",
 }
 
-func getValues(cluster *clusterv1.ManagedCluster,
+func getValues(_ *clusterv1.ManagedCluster,
 	addon *addonapiv1alpha1.ManagedClusterAddOn,
 ) (addonfactory.Values, error) {
 	userValues := policyaddon.UserValues{
@@ -66,6 +67,22 @@ func getValues(cluster *clusterv1.ManagedCluster,
 	return addonfactory.JsonStructToValues(userValues)
 }
 
+// mandateValues sets deployment variables regardless of user overrides. As a result, caution should
+// be taken when adding settings to this function.
+func mandateValues(
+	cluster *clusterv1.ManagedCluster,
+	_ *addonapiv1alpha1.ManagedClusterAddOn,
+) (addonfactory.Values, error) {
+	values := addonfactory.Values{}
+
+	// Don't allow replica overrides for older Kubernetes
+	if policyaddon.IsOldKubernetes(cluster) {
+		values["replicas"] = 1
+	}
+
+	return values, nil
+}
+
 func GetAgentAddon(controllerContext *controllercmd.ControllerContext) (agent.AgentAddon, error) {
 	registrationOption := policyaddon.NewRegistrationOption(
 		controllerContext,
@@ -88,12 +105,15 @@ func GetAgentAddon(controllerContext *controllercmd.ControllerContext) (agent.Ag
 			),
 			getValues,
 			addonfactory.GetValuesFromAddonAnnotation,
+			mandateValues,
 		).
 		WithAgentRegistrationOption(registrationOption).
 		WithAgentHostedModeEnabledOption().
 		BuildHelmAgentAddon()
 }
 
-func GetAndAddAgent(mgr addonmanager.AddonManager, controllerContext *controllercmd.ControllerContext) error {
-	return policyaddon.GetAndAddAgent(mgr, addonName, controllerContext, GetAgentAddon)
+func GetAndAddAgent(
+	ctx context.Context, mgr addonmanager.AddonManager, controllerContext *controllercmd.ControllerContext,
+) error {
+	return policyaddon.GetAndAddAgent(ctx, mgr, addonName, controllerContext, GetAgentAddon)
 }
