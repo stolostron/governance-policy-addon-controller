@@ -35,23 +35,16 @@ jobs:
       run: |
         go mod verify
 
-    - name: Verify format
+    - name: Some quality checks
       run: |
         make fmt
         git diff --exit-code
         make lint
+        make gosec-scan
 
     - name: Unit and Integration Tests
       run: |
         make test
-
-    - name: Gosec
-      if: |
-        github.event_name == 'push' &&
-        github.repository_owner == 'stolostron'  &&
-        matrix.kind == 'latest'
-      run: |
-        make gosec-scan
 
     - name: SonarCloud Analysis
       if: |
