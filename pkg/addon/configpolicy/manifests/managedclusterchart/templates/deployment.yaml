@@ -132,7 +132,6 @@ spec:
           containerPort: 8383
         {{- end }}
         resources: {{- toYaml .Values.resources | nindent 10 }}
-        securityContext:
         allowPrivilegeEscalation: false
         capabilities:
           drop:
@@ -178,4 +177,6 @@ spec:
       serviceAccount: {{ include "controller.serviceAccountName" . }}
       securityContext:
         runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       terminationGracePeriodSeconds: 120
