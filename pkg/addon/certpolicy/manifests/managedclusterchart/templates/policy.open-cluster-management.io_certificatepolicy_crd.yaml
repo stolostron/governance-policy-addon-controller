@@ -10,6 +10,7 @@ metadata:
   name: certificatepolicies.policy.open-cluster-management.io
   labels:
     addon.open-cluster-management.io/hosted-manifest-location: hosting
+    policy.open-cluster-management.io/policy-type: template
 spec:
   group: policy.open-cluster-management.io
   names:
