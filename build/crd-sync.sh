@@ -55,9 +55,9 @@ cat > pkg/addon/certpolicy/manifests/managedclusterchart/templates/policy.open-c
 # Copyright Contributors to the Open Cluster Management project
 
 {{- if semverCompare "< 1.16.0" .Capabilities.KubeVersion.Version }}
-$(yq e "$addLabelsExpression" .go/cert-policy-crd-v1beta1.yaml)
+$(yq e "$addLocationLabel | $addTemplateLabel" .go/cert-policy-crd-v1beta1.yaml)
 {{ else }}
-$(yq e "$addLabelsExpression" .go/cert-policy-crd-v1.yaml)
+$(yq e "$addLocationLabel" .go/cert-policy-crd-v1.yaml)
 {{- end }}
 EOF
 
@@ -75,9 +75,9 @@ cat > pkg/addon/iampolicy/manifests/managedclusterchart/templates/policy.open-cl
 # Copyright Contributors to the Open Cluster Management project
 
 {{- if semverCompare "< 1.16.0" .Capabilities.KubeVersion.Version }}
-$(yq e "$addLabelsExpression" .go/iam-policy-crd-v1beta1.yaml)
+$(yq e "$addLocationLabel | $addTemplateLabel" .go/iam-policy-crd-v1beta1.yaml)
 {{ else }}
-$(yq e "$addLabelsExpression" .go/iam-policy-crd-v1.yaml)
+$(yq e "$addLocationLabel" .go/iam-policy-crd-v1.yaml)
 {{- end }}
 EOF
 
