@@ -3,7 +3,7 @@ LOCAL_BIN ?= $(PWD)/bin
 
 RELEASE_BRANCH ?= main
 ifneq ($(RELEASE_BRANCH), main)
-  TAG ?= latest-$(subst release-,,$(RELEASE_BRANCH))
+  TAG ?= latest-2.9
 else
   TAG ?= latest
 endif
