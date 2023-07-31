@@ -119,7 +119,7 @@ var _ = Describe("Test iam-policy-controller deployment", func() {
 
 				g.Expect(phase.(string)).To(Equal("Running"))
 				containerList, _, err := unstructured.NestedSlice(pods.Items[0].Object, "spec", "containers")
-				g.Expect(err).To(BeNil())
+				g.Expect(err).ToNot(HaveOccurred())
 				for _, container := range containerList {
 					containerObj, ok := container.(map[string]interface{})
 					g.Expect(ok).To(BeTrue())

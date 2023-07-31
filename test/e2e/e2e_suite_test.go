@@ -78,7 +78,7 @@ var _ = BeforeSuite(func() {
 
 	var err error
 	hubKubeconfigInternal, err = os.ReadFile(kubeconfigFilename + "1.kubeconfig-internal")
-	Expect(err).To(BeNil())
+	Expect(err).ToNot(HaveOccurred())
 
 	managedClusterList = getManagedClusters(clientDynamic)
 })
