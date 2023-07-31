@@ -32,7 +32,7 @@ var agentPermissionFiles = []string{
 	"manifests/hubpermissions/rolebinding.yaml",
 }
 
-func getValues(cluster *clusterv1.ManagedCluster,
+func getValues(_ *clusterv1.ManagedCluster,
 	addon *addonapiv1alpha1.ManagedClusterAddOn,
 ) (addonfactory.Values, error) {
 	userValues := policyaddon.UserValues{
