@@ -8,6 +8,9 @@ import (
 	"strconv"
 
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 	"open-cluster-management.io/addon-framework/pkg/addonfactory"
 	"open-cluster-management.io/addon-framework/pkg/addonmanager"
 	"open-cluster-management.io/addon-framework/pkg/agent"
@@ -190,6 +193,55 @@ func mandateValues(
 	return values, nil
 }
 
+// set delete-orphan on policy crd if hosted + mangement + hub
+func setCrdAnnotation(controllerContext *controllercmd.ControllerContext) addonfactory.GetValuesFunc {
+	return func(cluster *clusterv1.ManagedCluster,
+		addon *addonapiv1alpha1.ManagedClusterAddOn,
+	) (addonfactory.Values, error) {
+		gvrPolicyCrd := schema.GroupVersionResource{
+			Group:    "apiextensions.k8s.io",
+			Version:  "v1",
+			Resource: "customresourcedefinitions",
+		}
+
+		hostingClusterName := "local-cluster"
+		if value, ok := os.LookupEnv("HOSTING_CLUSTER_NAME"); ok {
+			hostingClusterName = value
+		}
+
+		if addon.Annotations[addonapiv1alpha1.HostingClusterNameAnnotationKey] != hostingClusterName {
+			return addonfactory.Values{}, nil
+		}
+
+		dynamicAddon, err := dynamic.NewForConfig(controllerContext.KubeConfig)
+		if err != nil {
+			log.Error(err, "Err on setting dynamic config in setCrdAnnotation")
+
+			return addonfactory.Values{}, err
+		}
+
+		res := dynamicAddon.Resource(gvrPolicyCrd)
+
+		crd, err := res.Get(context.TODO(), "policies.policy.open-cluster-management.io", v1.GetOptions{})
+		if err != nil {
+			log.Error(err, "Err on getting Policy crd")
+
+			return addonfactory.Values{}, err
+		}
+
+		crdAnnotation := crd.GetAnnotations()
+		crdAnnotation[addonapiv1alpha1.DeletionOrphanAnnotationKey] = ""
+		crd.SetAnnotations(crdAnnotation)
+		_, err = res.Update(context.TODO(), crd, v1.UpdateOptions{})
+
+		if err != nil {
+			log.Error(err, "Err on adding delete-orphan annotation")
+		}
+
+		return addonfactory.Values{}, err
+	}
+}
+
 func GetAgentAddon(controllerContext *controllercmd.ControllerContext) (agent.AgentAddon, error) {
 	registrationOption := policyaddon.NewRegistrationOption(
 		controllerContext,
@@ -213,6 +265,7 @@ func GetAgentAddon(controllerContext *controllercmd.ControllerContext) (agent.Ag
 			getValues,
 			addonfactory.GetValuesFromAddonAnnotation,
 			mandateValues,
+			setCrdAnnotation(controllerContext),
 		).
 		WithAgentRegistrationOption(registrationOption).
 		WithScheme(policyaddon.Scheme).

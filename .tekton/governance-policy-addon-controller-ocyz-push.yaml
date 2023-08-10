@@ -14,7 +14,7 @@ metadata:
     appstudio.openshift.io/component: governance-policy-addon-controller-ocyz
     pipelines.appstudio.openshift.io/type: build
   name: governance-policy-addon-controller-ocyz-on-push
-  namespace: crt-redhat-acm-tenant
+  namespace: red-hat-acm-tenant
 spec:
   params:
   - name: dockerfile
@@ -22,7 +22,7 @@ spec:
   - name: git-url
     value: '{{repo_url}}'
   - name: output-image
-    value: quay.io/redhat-user-workloads/crt-redhat-acm-tenant/governance-policy-addon-controller/governance-policy-addon-controller-ocyz:{{revision}}
+    value: quay.io/redhat-user-workloads/red-hat-acm-tenant/governance-policy-addon-controller/governance-policy-addon-controller-ocyz:{{revision}}
   - name: path-context
     value: .
   - name: revision

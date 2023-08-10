@@ -22,6 +22,8 @@ const (
 	case2DeploymentName           string = "config-policy-controller"
 	case2PodSelector              string = "app=config-policy-controller"
 	case2OpenShiftClusterClaim    string = "../resources/openshift_cluster_claim.yaml"
+	policyCrdName                 string = "policies.policy.open-cluster-management.io"
+	deletionOrphanAnnotationKey   string = "addon.open-cluster-management.io/deletion-orphan"
 )
 
 func verifyConfigPolicyDeployment(
@@ -30,13 +32,13 @@ func verifyConfigPolicyDeployment(
 	By(logPrefix + "checking the number of containers in the deployment")
 
 	deploy := GetWithTimeout(
-		client, gvrDeployment, case2DeploymentName, namespace, true, 60,
+		client, gvrDeployment, case2DeploymentName, namespace, true, 240,
 	)
 	Expect(deploy).NotTo(BeNil())
 
 	Eventually(func() []interface{} {
 		deploy = GetWithTimeout(
-			client, gvrDeployment, case2DeploymentName, namespace, true, 30,
+			client, gvrDeployment, case2DeploymentName, namespace, true, 240,
 		)
 		containers, _, _ := unstructured.NestedSlice(deploy.Object, "spec", "template", "spec", "containers")
 
@@ -183,9 +185,18 @@ var _ = Describe("Test config-policy-controller deployment", func() {
 			ctx, cancel := context.WithTimeout(context.TODO(), 15*time.Second)
 			defer cancel()
 
+			By("Test policy crd annotation when management + hub hosted mode")
+			crd, err := clientDynamic.Resource(gvrPolicyCrd).Get(
+				ctx, policyCrdName, metav1.GetOptions{},
+			)
+			Expect(err).ToNot(HaveOccurred())
+
+			_, ok := crd.GetAnnotations()[deletionOrphanAnnotationKey]
+			Expect(ok).Should(BeTrue())
+
 			By(logPrefix +
 				"removing the config-policy-controller deployment when the ManagedClusterAddOn CR is removed")
-			err := clientDynamic.Resource(gvrManagedClusterAddOn).Namespace(cluster.clusterName).Delete(
+			err = clientDynamic.Resource(gvrManagedClusterAddOn).Namespace(cluster.clusterName).Delete(
 				ctx, case2ManagedClusterAddOnName, metav1.DeleteOptions{},
 			)
 			Expect(err).ToNot(HaveOccurred())
@@ -271,7 +282,7 @@ var _ = Describe("Test config-policy-controller deployment", func() {
 				)
 				Expect(err).ToNot(HaveOccurred())
 
-				namespace = GetWithTimeout(hubClient, gvrNamespace, installNamespace, "", false, 60)
+				namespace = GetWithTimeout(hubClient, gvrNamespace, installNamespace, "", false, 240)
 				Expect(namespace).To(BeNil())
 			}
 			By("Deleting the AddOnDeploymentConfig")

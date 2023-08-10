@@ -76,6 +76,8 @@ import (
 //+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
 //+kubebuilder:rbac:groups=config.openshift.io,resources=infrastructures,verbs=get;list;watch
 
+//+kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,verbs=get;patch;update;list
+
 var (
 	setupLog    = ctrl.Log.WithName("setup")
 	ctrlVersion = version.Info{}
