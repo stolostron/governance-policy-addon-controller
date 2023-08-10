@@ -170,7 +170,7 @@ var _ = Describe("Test iam-policy-controller deployment", func() {
 
 			installAddonInHostedMode(
 				logPrefix, hubClient, case3ManagedClusterAddOnName,
-				cluster.clusterName, hubClusterConfig.clusterName, installNamespace)
+				cluster.clusterName, hubClusterConfig.clusterName, installNamespace, nil)
 
 			// Use i+1 since the for loop ranges over a slice skipping first index
 			verifyIamPolicyDeployment(logPrefix, hubClient, cluster.clusterName, installNamespace, i+1)
@@ -224,7 +224,7 @@ var _ = Describe("Test iam-policy-controller deployment", func() {
 
 				installAddonInHostedMode(
 					logPrefix, hubClient, case3ManagedClusterAddOnName,
-					cluster.clusterName, hubClusterConfig.clusterName, installNamespace)
+					cluster.clusterName, hubClusterConfig.clusterName, installNamespace, nil)
 
 				// Use i+1 since the for loop ranges over a slice skipping first index
 				verifyIamPolicyDeployment(logPrefix, hubClient, cluster.clusterName, installNamespace, i+1)

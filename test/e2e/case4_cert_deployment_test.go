@@ -169,7 +169,7 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 
 			installAddonInHostedMode(
 				logPrefix, hubClient, case4ManagedClusterAddOnName,
-				cluster.clusterName, hubClusterConfig.clusterName, installNamespace)
+				cluster.clusterName, hubClusterConfig.clusterName, installNamespace, nil)
 
 			// Use i+1 since the for loop ranges over a slice skipping first index
 			verifyCertPolicyDeployment(logPrefix, hubClient, cluster.clusterName, installNamespace, i+1)
@@ -223,7 +223,7 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 
 				installAddonInHostedMode(
 					logPrefix, hubClient, case4ManagedClusterAddOnName,
-					cluster.clusterName, hubClusterConfig.clusterName, installNamespace)
+					cluster.clusterName, hubClusterConfig.clusterName, installNamespace, nil)
 
 				// Use i+1 since the for loop ranges over a slice skipping first index
 				verifyCertPolicyDeployment(logPrefix, hubClient, cluster.clusterName, installNamespace, i+1)
