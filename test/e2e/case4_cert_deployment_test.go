@@ -27,15 +27,14 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 			Expect(deploy).NotTo(BeNil())
 
 			By(logPrefix + "checking the number of containers in the deployment")
-			Eventually(func() int {
+			Eventually(func() []interface{} {
 				deploy = GetWithTimeout(
 					cluster.clusterClient, gvrDeployment, case4DeploymentName, addonNamespace, true, 30,
 				)
-				spec := deploy.Object["spec"].(map[string]interface{})["template"].(map[string]interface{})["spec"]
-				containers := spec.(map[string]interface{})["containers"]
+				containers, _, _ := unstructured.NestedSlice(deploy.Object, "spec", "template", "spec", "containers")
 
-				return len(containers.([]interface{}))
-			}, 60, 1).Should(Equal(1))
+				return containers
+			}, 60, 1).Should(HaveLen(1))
 
 			if startupProbeInCluster(i) {
 				By(logPrefix + "verifying all replicas in cert-policy-controller deployment are available")
@@ -58,15 +57,15 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 			}
 
 			By(logPrefix + "verifying a running cert-policy-controller pod")
-			Eventually(func() bool {
+			Eventually(func() string {
 				opts := metav1.ListOptions{
 					LabelSelector: case4PodSelector,
 				}
 				pods := ListWithTimeoutByNamespace(cluster.clusterClient, gvrPod, opts, addonNamespace, 1, true, 30)
 				phase, _, _ := unstructured.NestedString(pods.Items[0].Object, "status", "phase")
 
-				return phase == "Running"
-			}, 60, 1).Should(Equal(true))
+				return phase
+			}, 60, 1).Should(Equal("Running"))
 
 			By(logPrefix + "showing the cert-policy-controller managedclusteraddon as available")
 			Eventually(func() bool {
