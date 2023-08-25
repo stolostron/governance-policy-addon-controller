@@ -19,7 +19,7 @@ const (
 	case1hubValuesMCAOCR       string = "../resources/framework_hub_values_addon_cr.yaml"
 	case1DeploymentName        string = "governance-policy-framework"
 	case1PodSelector           string = "app=governance-policy-framework"
-	case1MWName                string = "addon-governance-policy-framework-deploy"
+	case1MWName                string = "addon-governance-policy-framework-deploy-0"
 	case1MWPatch               string = "../resources/manifestwork_add_patch.json"
 )
 
