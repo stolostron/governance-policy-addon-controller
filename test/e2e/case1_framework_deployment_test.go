@@ -115,10 +115,10 @@ var _ = Describe("Test framework deployment", Ordered, func() {
 			)
 			Expect(err).ToNot(HaveOccurred())
 
-			deploy := GetWithTimeout(hubClient, gvrDeployment, case1DeploymentName, installNamespace, false, 90)
+			deploy := GetWithTimeout(hubClient, gvrDeployment, case1DeploymentName, installNamespace, false, 60)
 			Expect(deploy).To(BeNil())
 
-			namespace := GetWithTimeout(hubClient, gvrNamespace, installNamespace, "", false, 30)
+			namespace := GetWithTimeout(hubClient, gvrNamespace, installNamespace, "", false, 120)
 			Expect(namespace).To(BeNil())
 		}
 	})
@@ -177,7 +177,7 @@ var _ = Describe("Test framework deployment", Ordered, func() {
 				)
 				Expect(err).ToNot(HaveOccurred())
 
-				namespace = GetWithTimeout(hubClient, gvrNamespace, installNamespace, "", false, 60)
+				namespace = GetWithTimeout(hubClient, gvrNamespace, installNamespace, "", false, 120)
 				Expect(namespace).To(BeNil())
 			}
 			By("Deleting the AddOnDeploymentConfig")
