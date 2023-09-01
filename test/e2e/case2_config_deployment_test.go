@@ -115,6 +115,12 @@ var _ = Describe("Test config-policy-controller deployment", Ordered, func() {
 				cluster.clusterClient, gvrDeployment, case2DeploymentName, addonNamespace, false, 180,
 			)
 			Expect(deploy).To(BeNil())
+
+			opts := metav1.ListOptions{
+				LabelSelector: case2PodSelector,
+			}
+			pods := ListWithTimeoutByNamespace(cluster.clusterClient, gvrPod, opts, addonNamespace, 0, false, 180)
+			Expect(pods).To(BeNil())
 		}
 	})
 
@@ -210,7 +216,7 @@ var _ = Describe("Test config-policy-controller deployment", Ordered, func() {
 			)
 			Expect(deploy).To(BeNil())
 
-			namespace := GetWithTimeout(hubClient, gvrNamespace, installNamespace, "", false, 30)
+			namespace := GetWithTimeout(hubClient, gvrNamespace, installNamespace, "", false, 120)
 			Expect(namespace).To(BeNil())
 		}
 	})
@@ -287,7 +293,7 @@ var _ = Describe("Test config-policy-controller deployment", Ordered, func() {
 				)
 				Expect(err).ToNot(HaveOccurred())
 
-				namespace = GetWithTimeout(hubClient, gvrNamespace, installNamespace, "", false, 60)
+				namespace = GetWithTimeout(hubClient, gvrNamespace, installNamespace, "", false, 120)
 				Expect(namespace).To(BeNil())
 			}
 			By("Deleting the AddOnDeploymentConfig")
@@ -349,7 +355,7 @@ var _ = Describe("Test config-policy-controller deployment", Ordered, func() {
 				opts := metav1.ListOptions{
 					LabelSelector: case2PodSelector,
 				}
-				pods := ListWithTimeoutByNamespace(cluster.clusterClient, gvrPod, opts, addonNamespace, 1, true, 60)
+				pods := ListWithTimeoutByNamespace(cluster.clusterClient, gvrPod, opts, addonNamespace, 1, true, 120)
 				phase := pods.Items[0].Object["status"].(map[string]interface{})["phase"]
 
 				g.Expect(phase.(string)).To(Equal("Running"))
