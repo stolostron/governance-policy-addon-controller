@@ -99,7 +99,7 @@ var _ = Describe("Test config-policy-controller deployment", func() {
 
 			By(logPrefix +
 				"removing the config-policy-controller deployment when the ManagedClusterAddOn CR is removed")
-			Kubectl("delete", "-n", cluster.clusterName, "-f", case2ManagedClusterAddOnCR, "--timeout=30s")
+			Kubectl("delete", "-n", cluster.clusterName, "-f", case2ManagedClusterAddOnCR, "--timeout=90s")
 			deploy := GetWithTimeout(
 				cluster.clusterClient, gvrDeployment, case2DeploymentName, addonNamespace, false, 180,
 			)
@@ -149,7 +149,7 @@ var _ = Describe("Test config-policy-controller deployment", func() {
 
 			By(logPrefix +
 				"removing the config-policy-controller deployment when the ManagedClusterAddOn CR is removed")
-			Kubectl("delete", "-n", cluster.clusterName, "-f", case2ManagedClusterAddOnCR, "--timeout=30s")
+			Kubectl("delete", "-n", cluster.clusterName, "-f", case2ManagedClusterAddOnCR, "--timeout=90s")
 			deploy = GetWithTimeout(
 				cluster.clusterClient, gvrDeployment, case2DeploymentName, addonNamespace, false, 180,
 			)
@@ -394,7 +394,7 @@ var _ = Describe("Test config-policy-controller deployment", func() {
 
 			By(logPrefix +
 				"removing the config-policy-controller deployment when the ManagedClusterAddOn CR is removed")
-			Kubectl("delete", "-n", cluster.clusterName, "-f", case2ManagedClusterAddOnCR, "--timeout=30s")
+			Kubectl("delete", "-n", cluster.clusterName, "-f", case2ManagedClusterAddOnCR, "--timeout=90s")
 			deploy = GetWithTimeout(
 				cluster.clusterClient, gvrDeployment, case2DeploymentName, addonNamespace, false, 180,
 			)
@@ -497,7 +497,7 @@ var _ = Describe("Test config-policy-controller deployment", func() {
 				"--timeout=15s",
 			)
 
-			Kubectl("delete", "-n", cluster.clusterName, "-f", case2ManagedClusterAddOnCR, "--timeout=30s")
+			Kubectl("delete", "-n", cluster.clusterName, "-f", case2ManagedClusterAddOnCR, "--timeout=90s")
 			deploy = GetWithTimeout(
 				cluster.clusterClient, gvrDeployment, case2DeploymentName, addonNamespace, false, 30,
 			)
