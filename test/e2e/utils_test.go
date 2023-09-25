@@ -44,11 +44,9 @@ func Kubectl(args ...string) string {
 	err := cmd.Run()
 	if err != nil {
 		// in case of failure, print command output (including error)
-		//nolint:forbidigo
-		fmt.Printf("output\n======\n%s\n", stdout.String())
-		//nolint:forbidigo
-		fmt.Printf("error\n======\n%s\n", stderr.String())
-		Fail(fmt.Sprintf("Error: %v", err))
+		GinkgoWriter.Printf("output\n======\n%s\n", stdout.String())
+		GinkgoWriter.Printf("error\n======\n%s\n", stderr.String())
+		Fail(fmt.Sprintf("Error: %v", err), 1)
 	}
 
 	return stdout.String()
