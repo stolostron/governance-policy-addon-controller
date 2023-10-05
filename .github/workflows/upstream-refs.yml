@@ -19,23 +19,22 @@ jobs:
     name: Upstream reference checks
     steps:
     - name: Checkout addon controller
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         path: governance-policy-addon-controller
         fetch-depth: 0 # Fetch all history for all tags and branches
 
     - name: Checkout Policy Framework
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         path: governance-policy-framework
         repository: stolostron/governance-policy-framework
         ref: ${{ github.event.pull_request.base.ref }}
 
-    - name: Set up Go 1.18
-      uses: actions/setup-go@v2
-      id: go
+    - name: Set up Go
+      uses: actions/setup-go@v3
       with:
-        go-version: '1.18'
+        go-version-file: governance-policy-framework/go.mod
 
     - name: Detect upstream references that should be replaced
       working-directory: governance-policy-addon-controller
