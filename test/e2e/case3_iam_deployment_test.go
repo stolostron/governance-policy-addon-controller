@@ -14,11 +14,12 @@ import (
 )
 
 const (
-	case3ManagedClusterAddOnName  string = "iam-policy-controller"
-	case3ManagedClusterAddOnCR    string = "../resources/iam_policy_addon_cr.yaml"
-	case3ClusterManagementAddOnCR string = "../resources/iam_policy_clustermanagementaddon.yaml"
-	case3DeploymentName           string = "iam-policy-controller"
-	case3PodSelector              string = "app=iam-policy-controller"
+	case3ManagedClusterAddOnName         string = "iam-policy-controller"
+	case3ManagedClusterAddOnCR           string = "../resources/iam_policy_addon_cr.yaml"
+	case3ClusterManagementAddOnCRDefault string = "../resources/iam_policy_clustermanagementaddon.yaml"
+	case3ClusterManagementAddOnCR        string = "../resources/iam_policy_clustermanagementaddon_config.yaml"
+	case3DeploymentName                  string = "iam-policy-controller"
+	case3PodSelector                     string = "app=iam-policy-controller"
 )
 
 func verifyIamPolicyDeployment(
@@ -82,7 +83,17 @@ func verifyIamPolicyDeployment(
 	}, 240, 1).Should(Equal(true))
 }
 
-var _ = Describe("Test iam-policy-controller deployment", func() {
+var _ = Describe("Test iam-policy-controller deployment", Ordered, func() {
+	BeforeAll(func() {
+		By("Deploying the default iam-policy-controller ClusterManagementAddon to the hub cluster")
+		Kubectl("apply", "-f", case3ClusterManagementAddOnCRDefault)
+	})
+
+	AfterAll(func() {
+		By("Deleting the default iam-policy-controller ClusterManagementAddon from the hub cluster")
+		Kubectl("delete", "-f", case3ClusterManagementAddOnCRDefault)
+	})
+
 	It("should create the iam-policy-controller deployment on the managed cluster", func() {
 		for i, cluster := range managedClusterList {
 			logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
@@ -102,8 +113,8 @@ var _ = Describe("Test iam-policy-controller deployment", func() {
 
 	It("should create a iam-policy-controller deployment with node selector on the managed cluster", func() {
 		By("Creating the AddOnDeploymentConfig")
-		Kubectl("apply", "-f", addOnDeplomentConfigCR)
-		By("Creating the iam-policy-controller ClusterManagementAddOn to use the AddOnDeploymentConfig")
+		Kubectl("apply", "-f", addOnDeploymentConfigCR)
+		By("Applying the iam-policy-controller ClusterManagementAddOn to use the AddOnDeploymentConfig")
 		Kubectl("apply", "-f", case3ClusterManagementAddOnCR)
 
 		for i, cluster := range managedClusterList {
@@ -144,9 +155,9 @@ var _ = Describe("Test iam-policy-controller deployment", func() {
 		}
 
 		By("Deleting the AddOnDeploymentConfig")
-		Kubectl("delete", "-f", addOnDeplomentConfigCR)
-		By("Deleting the iam-policy-controller ClusterManagementAddOn to use the AddOnDeploymentConfig")
-		Kubectl("delete", "-f", case3ClusterManagementAddOnCR)
+		Kubectl("delete", "-f", addOnDeploymentConfigCR)
+		By("Restoring the iam-policy-controller ClusterManagementAddOn")
+		Kubectl("apply", "-f", case3ClusterManagementAddOnCRDefault)
 	})
 
 	It("should create the default iam-policy-controller deployment in hosted mode", Label("hosted-mode"), func() {
@@ -200,8 +211,8 @@ var _ = Describe("Test iam-policy-controller deployment", func() {
 	It("should create the default iam-policy-controller deployment in hosted mode in klusterlet agent namespace",
 		Label("hosted-mode"), func() {
 			By("Creating the AddOnDeploymentConfig")
-			Kubectl("apply", "-f", addOnDeplomentConfigWithCustomVarsCR)
-			By("Creating the iam-policy-controller ClusterManagementAddOn to use the AddOnDeploymentConfig")
+			Kubectl("apply", "-f", addOnDeploymentConfigWithCustomVarsCR)
+			By("Applying the iam-policy-controller ClusterManagementAddOn to use the AddOnDeploymentConfig")
 			Kubectl("apply", "-f", case3ClusterManagementAddOnCR)
 
 			for i, cluster := range managedClusterList[1:] {
@@ -264,9 +275,9 @@ var _ = Describe("Test iam-policy-controller deployment", func() {
 				Expect(namespace).To(BeNil())
 			}
 			By("Deleting the AddOnDeploymentConfig")
-			Kubectl("delete", "-f", addOnDeplomentConfigWithCustomVarsCR)
-			By("Deleting the iam-policy-controller ClusterManagementAddOn to use the AddOnDeploymentConfig")
-			Kubectl("delete", "-f", case3ClusterManagementAddOnCR)
+			Kubectl("delete", "-f", addOnDeploymentConfigWithCustomVarsCR)
+			By("Restoring the iam-policy-controller ClusterManagementAddOn")
+			Kubectl("apply", "-f", case3ClusterManagementAddOnCRDefault)
 		})
 
 	It("should create an iam-policy-controller deployment with custom logging levels", func() {
