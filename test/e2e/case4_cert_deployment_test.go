@@ -14,11 +14,12 @@ import (
 )
 
 const (
-	case4ManagedClusterAddOnName  string = "cert-policy-controller"
-	case4ManagedClusterAddOnCR    string = "../resources/cert_policy_addon_cr.yaml"
-	case4ClusterManagementAddOnCR string = "../resources/cert_policy_clustermanagementaddon.yaml"
-	case4DeploymentName           string = "cert-policy-controller"
-	case4PodSelector              string = "app=cert-policy-controller"
+	case4ManagedClusterAddOnName         string = "cert-policy-controller"
+	case4ManagedClusterAddOnCR           string = "../resources/cert_policy_addon_cr.yaml"
+	case4ClusterManagementAddOnCRDefault string = "../resources/cert_policy_clustermanagementaddon.yaml"
+	case4ClusterManagementAddOnCR        string = "../resources/cert_policy_clustermanagementaddon_config.yaml"
+	case4DeploymentName                  string = "cert-policy-controller"
+	case4PodSelector                     string = "app=cert-policy-controller"
 )
 
 func verifyCertPolicyDeployment(
@@ -81,7 +82,17 @@ func verifyCertPolicyDeployment(
 	}, 240, 1).Should(Equal(true))
 }
 
-var _ = Describe("Test cert-policy-controller deployment", func() {
+var _ = Describe("Test cert-policy-controller deployment", Ordered, func() {
+	BeforeAll(func() {
+		By("Deploying the default cert-policy-controller ClusterManagementAddon to the hub cluster")
+		Kubectl("apply", "-f", case4ClusterManagementAddOnCRDefault)
+	})
+
+	AfterAll(func() {
+		By("Deleting the default cert-policy-controller ClusterManagementAddon from the hub cluster")
+		Kubectl("delete", "-f", case4ClusterManagementAddOnCRDefault)
+	})
+
 	It("should create the default cert-policy-controller deployment on the managed cluster", func() {
 		for i, cluster := range managedClusterList {
 			logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
@@ -101,8 +112,8 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 
 	It("should create a cert-policy-controller deployment with node selector on the managed cluster", func() {
 		By("Creating the AddOnDeploymentConfig")
-		Kubectl("apply", "-f", addOnDeplomentConfigCR)
-		By("Creating the cert-policy-controller ClusterManagementAddOn to use the AddOnDeploymentConfig")
+		Kubectl("apply", "-f", addOnDeploymentConfigCR)
+		By("Applying the cert-policy-controller ClusterManagementAddOn to use the AddOnDeploymentConfig")
 		Kubectl("apply", "-f", case4ClusterManagementAddOnCR)
 
 		for i, cluster := range managedClusterList {
@@ -143,9 +154,9 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 		}
 
 		By("Deleting the AddOnDeploymentConfig")
-		Kubectl("delete", "-f", addOnDeplomentConfigCR)
-		By("Deleting the cert-policy-controller ClusterManagementAddOn to use the AddOnDeploymentConfig")
-		Kubectl("delete", "-f", case4ClusterManagementAddOnCR)
+		Kubectl("delete", "-f", addOnDeploymentConfigCR)
+		By("Restoring the cert-policy-controller ClusterManagementAddOn")
+		Kubectl("apply", "-f", case4ClusterManagementAddOnCRDefault)
 	})
 
 	It("should create the default cert-policy-controller deployment in hosted mode", Label("hosted-mode"), func() {
@@ -200,8 +211,8 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 	It("should create the default cert-policy-controller deployment in hosted mode in klusterlet agent namespace",
 		Label("hosted-mode"), func() {
 			By("Creating the AddOnDeploymentConfig")
-			Kubectl("apply", "-f", addOnDeplomentConfigWithCustomVarsCR)
-			By("Creating the cert-policy-controller ClusterManagementAddOn to use the AddOnDeploymentConfig")
+			Kubectl("apply", "-f", addOnDeploymentConfigWithCustomVarsCR)
+			By("Applying the cert-policy-controller ClusterManagementAddOn to use the AddOnDeploymentConfig")
 			Kubectl("apply", "-f", case4ClusterManagementAddOnCR)
 
 			for i, cluster := range managedClusterList[1:] {
@@ -263,9 +274,9 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 				Expect(namespace).To(BeNil())
 			}
 			By("Deleting the AddOnDeploymentConfig")
-			Kubectl("delete", "-f", addOnDeplomentConfigWithCustomVarsCR)
-			By("Deleting the cert-policy-controller ClusterManagementAddOn to use the AddOnDeploymentConfig")
-			Kubectl("delete", "-f", case4ClusterManagementAddOnCR)
+			Kubectl("delete", "-f", addOnDeploymentConfigWithCustomVarsCR)
+			By("Restoring the cert-policy-controller ClusterManagementAddOn")
+			Kubectl("apply", "-f", case4ClusterManagementAddOnCRDefault)
 		})
 
 	It("should create a cert-policy-controller deployment with custom logging levels", func() {
