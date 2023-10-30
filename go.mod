@@ -10,12 +10,13 @@ require (
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.57.0
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
-	k8s.io/apimachinery v0.26.4
-	k8s.io/client-go v0.26.4
-	k8s.io/component-base v0.26.4
-	open-cluster-management.io/addon-framework v0.6.1
-	open-cluster-management.io/api v0.10.1-0.20230216050312-b716d4a5c514
-	sigs.k8s.io/controller-runtime v0.14.4
+	k8s.io/apimachinery v0.26.10
+	k8s.io/client-go v0.26.10
+	k8s.io/component-base v0.26.10
+	open-cluster-management.io/addon-framework v0.8.0
+	open-cluster-management.io/api v0.12.0
+	sigs.k8s.io/controller-runtime v0.14.6
+
 )
 
 require (
@@ -86,7 +87,7 @@ require (
 	go.etcd.io/etcd/client/pkg/v3 v3.5.5 // indirect
 	go.etcd.io/etcd/client/v3 v3.5.5 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.46.0 // indirect; CVE-2023-47108 (v0.46.0)
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.35.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.35.1 // indirect
 	go.opentelemetry.io/otel v1.20.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.19.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.10.0 // indirect
@@ -117,15 +118,15 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	helm.sh/helm/v3 v3.11.3 // indirect
-	k8s.io/api v0.26.4 // indirect
-	k8s.io/apiextensions-apiserver v0.26.1 // indirect
-	k8s.io/apiserver v0.26.2 // indirect
+	k8s.io/api v0.26.10 // indirect
+	k8s.io/apiextensions-apiserver v0.26.7 // indirect
+	k8s.io/apiserver v0.26.7 // indirect
 	k8s.io/klog/v2 v2.90.1 // indirect
-	k8s.io/kms v0.26.2 // indirect
+	k8s.io/kms v0.26.7 // indirect
 	k8s.io/kube-aggregator v0.26.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20221012153701-172d655c2280 // indirect
 	k8s.io/utils v0.0.0-20230220204549-a5ecb0141aa5 // indirect
-	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.35 // indirect
+	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.37 // indirect
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
 	sigs.k8s.io/kube-storage-version-migrator v0.0.4 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
