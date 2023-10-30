@@ -47,6 +47,7 @@ include build/common/Makefile.common.mk
 lint:
 
 .PHONY: fmt
+fmt:
 
 .PHONY: vet
 vet: ## Run go vet against code.
@@ -79,10 +80,6 @@ build: ## Build manager binary.
 # images section
 ############################################################
 
-ifndef ignore-not-found
-  ignore-not-found = false
-endif
-
 .PHONY: build-images
 build-images: generate fmt vet
 	@docker build -t ${IMAGE_NAME_AND_VERSION} -f build/Dockerfile .
@@ -93,7 +90,7 @@ build-images: generate fmt vet
 ############################################################
 
 .PHONY: clean
-clean: ## Clean up generated files.
+clean: kind-bootstrap-delete-clusters ## Clean up generated files.
 	-rm bin/*
 	-rm build/_output/bin/*
 	-rm coverage*.out
@@ -118,6 +115,7 @@ generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and
 ############################################################
 
 KUBEWAIT ?= $(PWD)/build/common/scripts/kubewait.sh
+ignore-not-found ?= false
 
 .PHONY: install
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
