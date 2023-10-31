@@ -125,15 +125,19 @@ func runController(ctx context.Context, controllerContext *controllercmd.Control
 		os.Exit(1)
 	}
 
-	agentFuncs := []func(addonmanager.AddonManager, *controllercmd.ControllerContext) error{
+	agentFuncs := []func(context.Context, addonmanager.AddonManager, *controllercmd.ControllerContext) error{
 		policyframework.GetAndAddAgent,
 		configpolicy.GetAndAddAgent,
 		iampolicy.GetAndAddAgent,
 		certpolicy.GetAndAddAgent,
 	}
 
+	// Define a background parent context for agents to use
+	managerCtx, managerCancel := context.WithCancel(context.Background())
+	defer managerCancel()
+
 	for _, f := range agentFuncs {
-		err := f(mgr, controllerContext)
+		err := f(managerCtx, mgr, controllerContext)
 		if err != nil {
 			setupLog.Error(err, "unable to get or add agent addon")
 			os.Exit(1)

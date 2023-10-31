@@ -1,6 +1,7 @@
 package configpolicy
 
 import (
+	"context"
 	"embed"
 	"fmt"
 	"os"
@@ -159,6 +160,8 @@ func GetAgentAddon(controllerContext *controllercmd.ControllerContext) (agent.Ag
 		BuildHelmAgentAddon()
 }
 
-func GetAndAddAgent(mgr addonmanager.AddonManager, controllerContext *controllercmd.ControllerContext) error {
-	return policyaddon.GetAndAddAgent(mgr, addonName, controllerContext, GetAgentAddon)
+func GetAndAddAgent(
+	ctx context.Context, mgr addonmanager.AddonManager, controllerContext *controllercmd.ControllerContext,
+) error {
+	return policyaddon.GetAndAddAgent(ctx, mgr, addonName, controllerContext, GetAgentAddon)
 }
