@@ -14,8 +14,7 @@ bin/
 vendor/
 build/_output/
 
-*.kubeconfig
-*.kubeconfig-internal
+kubeconfig_*
 coverage*.out
 report_e2e.json
 gosec.json
