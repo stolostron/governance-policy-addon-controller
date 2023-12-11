@@ -157,6 +157,7 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 				clusterName:   cluster.clusterName,
 				clusterType:   cluster.clusterType,
 				hostedOnHub:   true,
+				kubeconfig:    cluster.kubeconfig,
 			}
 			hubClusterConfig := managedClusterList[0]
 			hubClient := hubClusterConfig.clusterClient
@@ -165,7 +166,7 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 
 			setupClusterSecretForHostedMode(
 				logPrefix, hubClient, "cert-policy-controller-managed-kubeconfig",
-				string(hubKubeconfigInternal), installNamespace)
+				string(cluster.kubeconfig), installNamespace)
 
 			installAddonInHostedMode(
 				logPrefix, hubClient, case4ManagedClusterAddOnName,
