@@ -133,6 +133,16 @@ ManagedClusterAddOn resource. This will enable changes to the ManifestWork on th
 persist, but direct changes to resources on a managed cluster will still be reverted to match the
 ManifestWork.
 
+### Image Override Troubleshooting
+
+If there is trouble overriding an image or other configurations in ACM, the 
+`klusterletaddonconfig-pause` annotation is required on the `KlusterletAddonConfig` to add the
+`addon.open-cluster-management.io/values` annotation overrides in the `ManagedClusterAddon`.
+
+```shell
+oc annotate klusterletaddonconfig -n ${CLUSTER_NAME} ${CLUSTER_NAME} klusterletaddonconfig-pause=true --overwrite=true
+```
+
 ### Running Tests
 
 The e2e tests are intended to be run against a `kind` cluster. After setting one up with the steps
