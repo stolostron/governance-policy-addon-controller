@@ -422,7 +422,7 @@ var _ = Describe("Test config-policy-controller deployment", Ordered, func() {
 				"create",
 				"namespace",
 				"openshift-monitoring",
-				fmt.Sprintf("--kubeconfig=%s%d.kubeconfig", kubeconfigFilename, i+1),
+				fmt.Sprintf("--kubeconfig=%s%d_e2e", kubeconfigFilename, i+1),
 			)
 
 			By(logPrefix + "setting the product.open-cluster-management.io ClusterClaim to OpenShift")
@@ -515,7 +515,7 @@ var _ = Describe("Test config-policy-controller deployment", Ordered, func() {
 				"delete",
 				"namespace",
 				"openshift-monitoring",
-				fmt.Sprintf("--kubeconfig=%s%d.kubeconfig", kubeconfigFilename, i+1),
+				fmt.Sprintf("--kubeconfig=%s%d_e2e", kubeconfigFilename, i+1),
 				"--timeout=15s",
 			)
 
