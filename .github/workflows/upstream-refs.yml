@@ -22,7 +22,6 @@ jobs:
       uses: actions/checkout@v4
       with:
         path: governance-policy-addon-controller
-        fetch-depth: 0 # Fetch all history for all tags and branches
 
     - name: Checkout Policy Framework
       uses: actions/checkout@v4
@@ -35,6 +34,7 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version-file: governance-policy-framework/go.mod
+        cache-dependency-path: governance-policy-framework/go.sum
 
     - name: Detect upstream references that should be replaced
       working-directory: governance-policy-addon-controller

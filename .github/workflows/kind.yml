@@ -94,9 +94,9 @@ jobs:
       with:
         name: artifacts
         path: |
-          governance-policy-addon-controller/coverage*.out
-          governance-policy-addon-controller/event.json
-          governance-policy-addon-controller/gosec.json
+          coverage*.out
+          event.json
+          gosec.json
 
     - name: Debug
       if: ${{ failure() }}
