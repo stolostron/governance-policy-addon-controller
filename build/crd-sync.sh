@@ -31,9 +31,10 @@ generate_v1beta1() {
 
 (
     cd .go/cert-policy-controller
+    # CertificatePolicy CRD
     cp deploy/crds/policy.open-cluster-management.io_certificatepolicies.yaml ../cert-policy-crd-v1.yaml
-    CRD_OPTIONS="crd:trivialVersions=true,crdVersions=v1beta1" make manifests
     cp deploy/crds/policy.open-cluster-management.io_certificatepolicies.yaml ../cert-policy-crd-v1beta1.yaml
+    generate_v1beta1 ../cert-policy-crd-v1beta1.yaml
 )
 
 (
@@ -48,9 +49,10 @@ generate_v1beta1() {
 
 (
     cd .go/iam-policy-controller
+    # IamPolicy CRD
     cp deploy/crds/policy.open-cluster-management.io_iampolicies.yaml ../iam-policy-crd-v1.yaml
-    CRD_OPTIONS="crd:trivialVersions=true,crdVersions=v1beta1" make manifests
     cp deploy/crds/policy.open-cluster-management.io_iampolicies.yaml ../iam-policy-crd-v1beta1.yaml
+    generate_v1beta1 ../iam-policy-crd-v1beta1.yaml
 )
 
 (
