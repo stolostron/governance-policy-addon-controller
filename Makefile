@@ -177,9 +177,10 @@ kind-delete-cluster: ## Delete a kind cluster.
 	-rm $(KIND_KUBECONFIG_INTERNAL)
 
 OCM_REPO = $(PWD)/.go/ocm
+OCM_BRANCH = backplane-2.5
 $(OCM_REPO):
 	@mkdir -p .go
-	git clone --depth 1 https://github.com/open-cluster-management-io/ocm.git .go/ocm
+	git clone --depth 1 https://github.com/stolostron/ocm.git .go/ocm --branch $(OCM_BRANCH)
 
 .PHONY: kind-deploy-registration-operator-hub
 kind-deploy-registration-operator-hub: $(OCM_REPO) $(KIND_KUBECONFIG) ## Deploy the ocm registration operator to the kind cluster.
