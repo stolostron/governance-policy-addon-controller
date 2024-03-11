@@ -177,9 +177,16 @@ kind-delete-cluster: ## Delete a kind cluster.
 	-rm $(KIND_KUBECONFIG_INTERNAL)
 
 OCM_REPO = $(PWD)/.go/ocm
+OCM_BRANCH = backplane-2.6
 $(OCM_REPO):
+	# Verifying latest OCM repo. (Remove this check for non-current releases.) ...
+	@LATEST_OCM=$(shell git ls-remote --heads https://github.com/stolostron/ocm.git | awk '/refs\/heads\/backplane-*/ {print $$2}' | sort --version-sort | tail -1); \
+	if [[ "$${LATEST_OCM}" != "refs/heads/$(OCM_BRANCH)" ]]; then \
+	  echo "error: refs/heads/$(OCM_BRANCH) is not the latest (Found $${LATEST_OCM}). If this is an older release, remove this check."; \
+		exit 1; \
+	fi
 	@mkdir -p .go
-	git clone --depth 1 https://github.com/open-cluster-management-io/ocm.git .go/ocm
+	git clone --depth 1 https://github.com/stolostron/ocm.git .go/ocm --branch $(OCM_BRANCH)
 
 .PHONY: kind-deploy-registration-operator-hub
 kind-deploy-registration-operator-hub: $(OCM_REPO) $(KIND_KUBECONFIG) ## Deploy the ocm registration operator to the kind cluster.
