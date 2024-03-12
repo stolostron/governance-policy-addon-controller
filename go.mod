@@ -146,4 +146,5 @@ replace (
 	// opentelemetry package required to bump addon-framework to v0.6.1
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc => go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.19.0
 	golang.org/x/text => golang.org/x/text v0.9.0 // CVE-2022-32149
+	google.golang.org/protobuf => google.golang.org/protobuf v1.33.0 // CVE-2024-24786; >=v1.33.0
 )
