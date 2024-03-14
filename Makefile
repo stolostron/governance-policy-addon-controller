@@ -183,7 +183,7 @@ OCM_BRANCH = backplane-2.6
 $(OCM_REPO):
 	# Verifying latest OCM repo. (Remove this check for non-current releases.) ...
 	@LATEST_OCM=$(shell git ls-remote --heads https://github.com/stolostron/ocm.git | awk '/refs\/heads\/backplane-*/ {print $$2}' | sort --version-sort | tail -1); \
-	if [[ "$${LATEST_OCM}" != "refs/heads/$(OCM_BRANCH)" ]]; then \
+	if [ "$${LATEST_OCM}" != "refs/heads/$(OCM_BRANCH)" ]; then \
 	  echo "error: refs/heads/$(OCM_BRANCH) is not the latest (Found $${LATEST_OCM}). If this is an older release, remove this check."; \
 		exit 1; \
 	fi
@@ -192,7 +192,7 @@ $(OCM_REPO):
 
 .PHONY: kind-deploy-registration-operator-hub
 kind-deploy-registration-operator-hub: $(OCM_REPO) $(KIND_KUBECONFIG) ## Deploy the ocm registration operator to the kind cluster.
-	cd $(OCM_REPO) && KUBECONFIG=$(KIND_KUBECONFIG) KUSTOMIZE_VERSION=$(KUSTOMIZE_VERSION_CLEAN) make deploy-hub
+	cd $(OCM_REPO) && KUBECONFIG=$(KIND_KUBECONFIG) KUSTOMIZE_VERSION=$(KUSTOMIZE_VERSION_CLEAN) IMAGE_TAG=$(OCM_BRANCH) IMAGE_REGISTRY=$(REGISTRY) make deploy-hub
 	@printf "\n*** Pausing and waiting to let everything deploy ***\n\n"
 	KUBECONFIG=$(KIND_KUBECONFIG) $(KUBEWAIT) -r deploy/cluster-manager -n open-cluster-management -c condition=Available -m 90
 	KUBECONFIG=$(KIND_KUBECONFIG) $(KUBEWAIT) -r deploy/cluster-manager-placement-controller -n open-cluster-management-hub -c condition=Available -m 90
@@ -204,17 +204,17 @@ kind-deploy-registration-operator-hub: $(OCM_REPO) $(KIND_KUBECONFIG) ## Deploy 
 kind-deploy-registration-operator-managed: $(OCM_REPO) $(KIND_KUBECONFIG) ## Deploy the ocm registration operator to the kind cluster.
 	cd $(OCM_REPO) && \
 	KUBECONFIG=$(KIND_KUBECONFIG) MANAGED_CLUSTER_NAME=$(CLUSTER_NAME) HUB_KUBECONFIG=$(HUB_KUBECONFIG_INTERNAL) \
-	KUSTOMIZE_VERSION=$(KUSTOMIZE_VERSION_CLEAN) make deploy-spoke-operator
+	KUSTOMIZE_VERSION=$(KUSTOMIZE_VERSION_CLEAN) IMAGE_TAG=$(OCM_BRANCH) IMAGE_REGISTRY=$(REGISTRY) make deploy-spoke-operator
 	cd $(OCM_REPO) && \
 	KUBECONFIG=$(KIND_KUBECONFIG) MANAGED_CLUSTER_NAME=$(CLUSTER_NAME) HUB_KUBECONFIG=$(HUB_KUBECONFIG_INTERNAL) \
-	KUSTOMIZE_VERSION=$(KUSTOMIZE_VERSION_CLEAN) make apply-spoke-cr
+	KUSTOMIZE_VERSION=$(KUSTOMIZE_VERSION_CLEAN) IMAGE_TAG=$(OCM_BRANCH) IMAGE_REGISTRY=$(REGISTRY) make apply-spoke-cr
 
 .PHONY: kind-deploy-registration-operator-managed-hosted
 kind-deploy-registration-operator-managed-hosted: $(OCM_REPO) $(KIND_KUBECONFIG) ## Deploy the ocm registration operator to the kind cluster in hosted mode.
 	cd $(OCM_REPO) && \
 	KUBECONFIG=$(HUB_KUBECONFIG) MANAGED_CLUSTER_NAME=$(CLUSTER_NAME) HUB_KUBECONFIG=$(HUB_KUBECONFIG_INTERNAL) \
 	HOSTED_CLUSTER_MANAGER_NAME=$(HUB_CLUSTER_NAME) EXTERNAL_MANAGED_KUBECONFIG=$(KIND_KUBECONFIG_INTERNAL) \
-	KUSTOMIZE_VERSION=$(KUSTOMIZE_VERSION_CLEAN) make deploy-spoke-hosted
+	KUSTOMIZE_VERSION=$(KUSTOMIZE_VERSION_CLEAN) IMAGE_TAG=$(OCM_BRANCH) IMAGE_REGISTRY=$(REGISTRY) make deploy-spoke-hosted
 
 .PHONY: kind-approve-cluster
 kind-approve-cluster: $(KIND_KUBECONFIG) ## Approve managed cluster in the kind cluster.
