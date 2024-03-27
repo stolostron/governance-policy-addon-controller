@@ -186,6 +186,8 @@ func runController(ctx context.Context, controllerContext *controllercmd.Control
 		wg.Add(1)
 
 		go func() {
+			defer wg.Done()
+
 			err := dynamicWatcher.Start(ctx)
 			if err != nil {
 				klog.Error(
@@ -193,8 +195,6 @@ func runController(ctx context.Context, controllerContext *controllercmd.Control
 				)
 				os.Exit(1)
 			}
-
-			wg.Done()
 		}()
 
 		klog.Info("Waiting for the dynamic watcher to start")
@@ -237,13 +237,16 @@ func runController(ctx context.Context, controllerContext *controllercmd.Control
 	wg.Add(1)
 
 	go func() {
+		defer wg.Done()
+
 		err = mgr.Start(ctx)
 		if err != nil {
 			klog.Error(err, "problem starting manager")
 			os.Exit(1)
 		}
 
-		wg.Done()
+		// mgr.Start is not blocking so wait on the context to finish
+		<-ctx.Done()
 	}()
 
 	wg.Wait()
