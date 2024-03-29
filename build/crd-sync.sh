@@ -74,7 +74,7 @@ replaceAnnotation='s/SEDTARGET: SEDTARGET/{{ if .Values.onMulticlusterHub }}"add
 cat > pkg/addon/certpolicy/manifests/managedclusterchart/templates/policy.open-cluster-management.io_certificatepolicy_crd.yaml << EOF
 # Copyright Contributors to the Open Cluster Management project
 
-{{- if semverCompare "< 1.16.0" .Capabilities.KubeVersion.Version }}
+{{- if semverCompare "< 1.16.0" (.Values.hostingClusterCapabilities.KubeVersion.Version | default .Capabilities.KubeVersion.Version) }}
 $(yq e "$addLocationLabel | $addTemplateLabel" .go/cert-policy-crd-v1beta1.yaml)
 {{ else }}
 $(yq e "$addLocationLabel" .go/cert-policy-crd-v1.yaml)
@@ -84,7 +84,7 @@ EOF
 cat > pkg/addon/configpolicy/manifests/managedclusterchart/templates/policy.open-cluster-management.io_configurationpolicies_crd.yaml << EOF
 # Copyright Contributors to the Open Cluster Management project
 
-{{- if semverCompare "< 1.16.0" .Capabilities.KubeVersion.Version }}
+{{- if semverCompare "< 1.16.0" (.Values.hostingClusterCapabilities.KubeVersion.Version | default .Capabilities.KubeVersion.Version) }}
 $(yq e "$addLocationLabel | $addTemplateLabel" .go/config-policy-crd-v1beta1.yaml)
 {{ else }}
 $(yq e "$addLocationLabel" .go/config-policy-crd-v1.yaml)
@@ -94,7 +94,7 @@ EOF
 cat > pkg/addon/configpolicy/manifests/managedclusterchart/templates/policy.open-cluster-management.io_operatorpolicies_crd.yaml << EOF
 # Copyright Contributors to the Open Cluster Management project
 
-{{- if semverCompare "> 1.16.0" .Capabilities.KubeVersion.Version }}
+{{- if semverCompare "> 1.16.0" (.Values.hostingClusterCapabilities.KubeVersion.Version | default .Capabilities.KubeVersion.Version) }}
 $(yq e "$addLocationLabel" .go/operator-policy-crd-v1.yaml)
 {{- end }}
 EOF
@@ -102,7 +102,7 @@ EOF
 cat > pkg/addon/iampolicy/manifests/managedclusterchart/templates/policy.open-cluster-management.io_iampolicy_crd.yaml << EOF
 # Copyright Contributors to the Open Cluster Management project
 
-{{- if semverCompare "< 1.16.0" .Capabilities.KubeVersion.Version }}
+{{- if semverCompare "< 1.16.0" (.Values.hostingClusterCapabilities.KubeVersion.Version | default .Capabilities.KubeVersion.Version) }}
 $(yq e "$addLocationLabel | $addTemplateLabel" .go/iam-policy-crd-v1beta1.yaml)
 {{ else }}
 $(yq e "$addLocationLabel" .go/iam-policy-crd-v1.yaml)
@@ -112,7 +112,7 @@ EOF
 cat > pkg/addon/policyframework/manifests/managedclusterchart/templates/policy.open-cluster-management.io_policies_crd.yaml << EOF
 # Copyright Contributors to the Open Cluster Management project
 
-{{- if semverCompare "< 1.16.0" .Capabilities.KubeVersion.Version }}
+{{- if semverCompare "< 1.16.0" (.Values.hostingClusterCapabilities.KubeVersion.Version | default .Capabilities.KubeVersion.Version) }}
 $(yq e "$addTempAnnotation | $addLocationLabel" .go/policy-crd-v1beta1.yaml | sed -E "$replaceAnnotation")
 {{ else }}
 $(yq e "$addTempAnnotation | $addLocationLabel" .go/policy-crd-v1.yaml | sed -E "$replaceAnnotation")
