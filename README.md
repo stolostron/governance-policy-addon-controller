@@ -22,8 +22,6 @@ The addons managed by this controller are:
   [Configuration Policy Controller](https://github.com/stolostron/config-policy-controller).
 - The "cert-policy-controller" consisting of the
   [Certificate Policy Controller](https://github.com/stolostron/cert-policy-controller).
-- The "iam-policy-controller" consisting of the
-  [IAM Policy Controller](https://github.com/stolostron/iam-policy-controller).
 - The "governance-policy-framework" consisting of the
   [Governance Policy Framework Addon](https://github.com/stolostron/governance-policy-framework-addon).
 
