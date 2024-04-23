@@ -277,7 +277,6 @@ COVERAGE_E2E_OUT ?= coverage_e2e.out
 LOG_REDIRECT ?= &>build/_output/controller.log
 e2e-run-instrumented: e2e-build-instrumented
 	-KUBECONFIG=$(KIND_KUBECONFIG) kubectl create ns $(CONTROLLER_NAMESPACE)
-	IAM_POLICY_CONTROLLER_IMAGE="$(REGISTRY)/iam-policy-controller:$(TAG)" \
 	  CERT_POLICY_CONTROLLER_IMAGE="$(REGISTRY)/cert-policy-controller:$(TAG)" \
 	  CONFIG_POLICY_CONTROLLER_IMAGE="$(REGISTRY)/config-policy-controller:$(TAG)" \
 	  KUBE_RBAC_PROXY_IMAGE="registry.redhat.io/openshift4/ose-kube-rbac-proxy:v4.10" \

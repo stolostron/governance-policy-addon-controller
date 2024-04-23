@@ -8,7 +8,7 @@ BRANCH=${BRANCH:-"main"}
 mkdir -p .go
 
 # Clone repositories containing the CRD definitions
-for REPO in cert-policy-controller config-policy-controller iam-policy-controller governance-policy-propagator
+for REPO in cert-policy-controller config-policy-controller governance-policy-propagator
 do
     # Try a given ORG/BRANCH, but fall back to the stolostron org on the main branch if it fails
     git clone -b "${BRANCH}" --depth 1 https://github.com/${ORG}/${REPO}.git .go/${REPO} \
@@ -45,14 +45,6 @@ generate_v1beta1() {
     generate_v1beta1 ../config-policy-crd-v1beta1.yaml
     # OperatorPolicy CRD (v1beta1 not required since it's not supported on earlier K8s)
     cp deploy/crds/policy.open-cluster-management.io_operatorpolicies.yaml ../operator-policy-crd-v1.yaml
-)
-
-(
-    cd .go/iam-policy-controller
-    # IamPolicy CRD
-    cp deploy/crds/policy.open-cluster-management.io_iampolicies.yaml ../iam-policy-crd-v1.yaml
-    cp deploy/crds/policy.open-cluster-management.io_iampolicies.yaml ../iam-policy-crd-v1beta1.yaml
-    generate_v1beta1 ../iam-policy-crd-v1beta1.yaml
 )
 
 (
@@ -97,14 +89,6 @@ $(yq e "$addLocationLabel" .go/operator-policy-crd-v1.yaml)
 {{- end }}
 EOF
 
-cat > pkg/addon/iampolicy/manifests/managedclusterchart/templates/policy.open-cluster-management.io_iampolicy_crd.yaml << EOF
-${crdPrefix}
-$(yq e "$addLocationLabel | $addTemplateLabel" .go/iam-policy-crd-v1beta1.yaml)
-{{ else }}
-$(yq e "$addLocationLabel" .go/iam-policy-crd-v1.yaml)
-{{- end }}
-EOF
-
 cat > pkg/addon/policyframework/manifests/managedclusterchart/templates/policy.open-cluster-management.io_policies_crd.yaml << EOF
 ${crdPrefix}
 $(yq e "$addTempAnnotation | $addLocationLabel" .go/policy-crd-v1beta1.yaml | sed -E "$replaceAnnotation")
@@ -114,7 +98,7 @@ $(yq e "$addTempAnnotation | $addLocationLabel" .go/policy-crd-v1.yaml | sed -E 
 EOF
 
 # Clean up the repositories - the chmod is necessary because Go makes some read-only things.
-for REPO in cert-policy-controller config-policy-controller iam-policy-controller governance-policy-propagator
+for REPO in cert-policy-controller config-policy-controller governance-policy-propagator
 do
     chmod -R +rw .go/${REPO}
     rm -rf .go/${REPO}

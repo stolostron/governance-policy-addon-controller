@@ -36,5 +36,4 @@ jobs:
           -q "config/manager/manager.yaml"
           -q "pkg/addon/certpolicy/manifests/managedclusterchart/values.yaml"
           -q "pkg/addon/configpolicy/manifests/managedclusterchart/values.yaml"
-          -q "pkg/addon/iampolicy/manifests/managedclusterchart/values.yaml"
           -q "pkg/addon/policyframework/manifests/managedclusterchart/values.yaml"
