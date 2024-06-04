@@ -185,8 +185,7 @@ $(OCM_REPO):
 	# Verifying latest OCM repo. (Remove this check for non-current releases.) ...
 	@LATEST_OCM=$(shell git ls-remote --heads https://github.com/stolostron/ocm.git | awk '/refs\/heads\/backplane-*/ {print $$2}' | sort --version-sort | tail -1); \
 	if [ "$${LATEST_OCM}" != "refs/heads/$(OCM_BRANCH)" ]; then \
-	  echo "error: refs/heads/$(OCM_BRANCH) is not the latest (Found $${LATEST_OCM}). If this is an older release, remove this check."; \
-		exit 1; \
+	  echo "warning: refs/heads/$(OCM_BRANCH) is not the latest (Found $${LATEST_OCM}). If this is an older release, remove this check."; \
 	fi
 	@mkdir -p .go
 	git clone --depth 1 https://github.com/stolostron/ocm.git .go/ocm --branch $(OCM_BRANCH)
