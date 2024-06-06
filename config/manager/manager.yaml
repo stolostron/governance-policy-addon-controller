@@ -42,8 +42,6 @@ spec:
           value: quay.io/stolostron/cert-policy-controller:latest
         - name: CONFIG_POLICY_CONTROLLER_IMAGE
           value: quay.io/stolostron/config-policy-controller:latest
-        - name: KUBE_RBAC_PROXY_IMAGE
-          value: registry.redhat.io/openshift4/ose-kube-rbac-proxy:v4.10
         - name: GOVERNANCE_POLICY_FRAMEWORK_ADDON_IMAGE
           value: quay.io/stolostron/governance-policy-framework-addon:latest
         name: manager
