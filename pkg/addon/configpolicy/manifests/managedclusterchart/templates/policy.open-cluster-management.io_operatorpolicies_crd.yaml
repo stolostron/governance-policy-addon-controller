@@ -249,6 +249,10 @@ spec:
                   x-kubernetes-list-map-keys:
                     - type
                   x-kubernetes-list-type: map
+                observedGeneration:
+                  description: ObservedGeneration is the latest generation observed by the controller.
+                  format: int64
+                  type: integer
                 overlappingPolicies:
                   description: >-
                     The list of overlapping OperatorPolicies (as name.namespace) which all manage the same subscription, including this policy. When no overlapping is detected, this list will be empty.
