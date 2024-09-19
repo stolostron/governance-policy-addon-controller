@@ -71,7 +71,7 @@ spec:
             {{- if eq .Values.installMode "Hosted" }}
             value: {{ .Release.Namespace }}
             {{- else }}
-            value: {{ .Values.clusterName }}
+            value: "{{ .Values.clusterName }}"
             {{- end }}
           - name: POD_NAME
             valueFrom:
