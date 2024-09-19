@@ -8,7 +8,7 @@ metadata:
   {{- if eq .Values.installMode "Hosted" }}
   namespace: {{ .Release.Namespace }}
   {{- else }}
-  namespace: {{ .Values.clusterName }}
+  namespace: "{{ .Values.clusterName }}"
   {{- end }}
   labels:
     app: {{ include "controller.fullname" . }}
