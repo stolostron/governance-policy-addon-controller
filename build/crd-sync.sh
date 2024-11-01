@@ -37,8 +37,6 @@ format_descriptions() {
     # CertificatePolicy CRD
     format_descriptions deploy/crds/policy.open-cluster-management.io_certificatepolicies.yaml
     cp deploy/crds/policy.open-cluster-management.io_certificatepolicies.yaml ../cert-policy-crd-v1.yaml
-    cp deploy/crds/policy.open-cluster-management.io_certificatepolicies.yaml ../cert-policy-crd-v1beta1.yaml
-    generate_v1beta1 ../cert-policy-crd-v1beta1.yaml
 )
 
 (
@@ -70,10 +68,7 @@ replaceAnnotation='s/SEDTARGET: SEDTARGET/{{ if .Values.onMulticlusterHub }}"add
 
 cat >pkg/addon/certpolicy/manifests/managedclusterchart/templates/policy.open-cluster-management.io_certificatepolicy_crd.yaml <<EOF
 ${crdPrefix}
-$(yq e "$addLocationLabel | $addTemplateLabel" .go/cert-policy-crd-v1beta1.yaml)
-{{ else }}
 $(yq e "$addLocationLabel" .go/cert-policy-crd-v1.yaml)
-{{- end }}
 EOF
 
 cat >pkg/addon/configpolicy/manifests/managedclusterchart/templates/policy.open-cluster-management.io_configurationpolicies_crd.yaml <<EOF
