@@ -26,7 +26,12 @@ RUN  /usr/local/bin/user_setup
 
 ENTRYPOINT ["/usr/local/bin/entrypoint"]
 
-RUN microdnf update -y && \
-    microdnf clean all
-
 USER ${USER_UID}
+
+LABEL name="rhacm2/acm-governance-policy-addon-controller-rhel9"
+LABEL summary="Manage the governance addon deployed to managed clusters"
+LABEL description="Manage the governance addon deployed to managed clusters"
+LABEL io.k8s.display-name="Governance policy addon controller"
+LABEL io.k8s.description="Manage the governance addon deployed to managed clusters"
+LABEL com.redhat.component="acm-governance-policy-addon-controller-container"
+LABEL io.openshift.tags="data,images"
