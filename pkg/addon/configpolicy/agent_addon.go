@@ -263,6 +263,7 @@ func GetAgentAddon(ctx context.Context, controllerContext *controllercmd.Control
 			addonfactory.GetAddOnDeploymentConfigValues(
 				addonfactory.NewAddOnDeploymentConfigGetter(addonClient),
 				addonfactory.ToAddOnNodePlacementValues,
+				addonfactory.ToAddOnResourceRequirementsValues,
 				addonfactory.ToAddOnCustomizedVariableValues,
 			),
 			getValues(ctx, clusterClient, addonClient),
