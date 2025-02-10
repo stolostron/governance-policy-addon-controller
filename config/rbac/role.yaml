@@ -48,6 +48,7 @@ rules:
   - cert-policy-controller
   - config-policy-controller
   - governance-policy-framework
+  - governance-standalone-hub-templating
   - iam-policy-controller
   resources:
   - clustermanagementaddons/finalizers
@@ -60,6 +61,7 @@ rules:
   - cert-policy-controller
   - config-policy-controller
   - governance-policy-framework
+  - governance-standalone-hub-templating
   resources:
   - clustermanagementaddons/status
   - managedclusteraddons/status
@@ -82,6 +84,7 @@ rules:
   - cert-policy-controller
   - config-policy-controller
   - governance-policy-framework
+  - governance-standalone-hub-templating
   - iam-policy-controller
   resources:
   - managedclusteraddons
@@ -147,6 +150,7 @@ rules:
   - cert-policy-controller
   - config-policy-controller
   - governance-policy-framework
+  - governance-standalone-hub-templating
   resources:
   - leases
   verbs:
@@ -193,6 +197,7 @@ rules:
   resourceNames:
   - open-cluster-management:cert-policy-controller-hub
   - open-cluster-management:config-policy-controller-hub
+  - open-cluster-management:governance-standalone-hub-templating
   - open-cluster-management:policy-framework-hub
   resources:
   - clusterroles

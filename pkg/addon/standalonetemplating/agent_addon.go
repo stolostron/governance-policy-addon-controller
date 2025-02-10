@@ -1,12 +1,12 @@
-package certpolicy
+package standalonetemplating
 
 import (
 	"context"
 	"embed"
 	"fmt"
-	"os"
 
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
+	"k8s.io/apimachinery/pkg/runtime"
 	"open-cluster-management.io/addon-framework/pkg/addonfactory"
 	"open-cluster-management.io/addon-framework/pkg/addonmanager"
 	"open-cluster-management.io/addon-framework/pkg/agent"
@@ -19,7 +19,8 @@ import (
 )
 
 const (
-	addonName = "cert-policy-controller"
+	addonName       = "governance-standalone-hub-templating"
+	cfgpolAddonName = "config-policy-controller"
 )
 
 // FS go:embed
@@ -30,67 +31,28 @@ const (
 var FS embed.FS
 
 var agentPermissionFiles = []string{
-	// role with RBAC rules to access resources on hub
 	"manifests/hubpermissions/role.yaml",
-	// rolebinding to bind the above role to a certain user group
 	"manifests/hubpermissions/rolebinding.yaml",
 }
 
 func getValues(_ *clusterv1.ManagedCluster,
 	addon *addonapiv1alpha1.ManagedClusterAddOn,
 ) (addonfactory.Values, error) {
-	userValues := policyaddon.UserValues{
-		GlobalValues: policyaddon.GlobalValues{
-			ImagePullPolicy: "IfNotPresent",
-			ImagePullSecret: "open-cluster-management-image-pull-credentials",
-			ImageOverrides: map[string]string{
-				"cert_policy_controller": os.Getenv("CERT_POLICY_CONTROLLER_IMAGE"),
-			},
-			ProxyConfig: map[string]string{
-				"HTTP_PROXY":  "",
-				"HTTPS_PROXY": "",
-				"NO_PROXY":    "",
-			},
-		},
-		UserArgs: policyaddon.UserArgs{
-			LogEncoder:  "console",
-			LogLevel:    0,
-			PkgLogLevel: -1,
-		},
-	}
-
-	if val, ok := addon.GetAnnotations()[policyaddon.PolicyLogLevelAnnotation]; ok {
-		logLevel := policyaddon.GetLogLevel(addonName, val)
-		userValues.UserArgs.LogLevel = logLevel
-		userValues.UserArgs.PkgLogLevel = logLevel - 2
-	}
-
-	return addonfactory.JsonStructToValues(userValues)
-}
-
-// mandateValues sets deployment variables regardless of user overrides. As a result, caution should
-// be taken when adding settings to this function.
-func mandateValues(
-	cluster *clusterv1.ManagedCluster,
-	_ *addonapiv1alpha1.ManagedClusterAddOn,
-) (addonfactory.Values, error) {
 	values := addonfactory.Values{}
 
-	// Don't allow replica overrides for older Kubernetes
-	if policyaddon.IsOldKubernetes(cluster) {
-		values["replicas"] = 1
-	}
+	// Inform users of the cluster-specific group they can bind more permissions to
+	values["hubGroup"] = agent.DefaultGroups(addon.Namespace, addon.Name)[0]
 
 	return values, nil
 }
 
-func GetAgentAddon(ctx context.Context, controllerContext *controllercmd.ControllerContext) (agent.AgentAddon, error) {
+func getAgentAddon(ctx context.Context, controllerContext *controllercmd.ControllerContext) (agent.AgentAddon, error) {
 	registrationOption := policyaddon.NewRegistrationOption(
 		controllerContext,
 		addonName,
 		agentPermissionFiles,
 		FS,
-		false)
+		true)
 
 	addonClient, err := addonv1alpha1client.NewForConfig(controllerContext.KubeConfig)
 	if err != nil {
@@ -110,10 +72,7 @@ func GetAgentAddon(ctx context.Context, controllerContext *controllercmd.Control
 				addonfactory.ToAddOnNodePlacementValues,
 				addonfactory.ToAddOnCustomizedVariableValues,
 			),
-			getValues,
-			addonfactory.GetValuesFromAddonAnnotation,
-			mandateValues,
-		).
+			getValues).
 		WithManagedClusterClient(clusterClient).
 		WithAgentRegistrationOption(registrationOption).
 		WithAgentInstallNamespace(
@@ -124,8 +83,38 @@ func GetAgentAddon(ctx context.Context, controllerContext *controllercmd.Control
 		BuildHelmAgentAddon()
 }
 
+type StandaloneAgentAddon struct {
+	agent.AgentAddon
+	manager addonmanager.AddonManager
+}
+
+func (sa *StandaloneAgentAddon) Manifests(
+	cluster *clusterv1.ManagedCluster,
+	addon *addonapiv1alpha1.ManagedClusterAddOn,
+) ([]runtime.Object, error) {
+	// config-policy addon needs to update itself whenever this addon is created/updated/deleted
+	sa.manager.Trigger(cluster.Name, cfgpolAddonName)
+
+	return sa.AgentAddon.Manifests(cluster, addon)
+}
+
 func GetAndAddAgent(
 	ctx context.Context, mgr addonmanager.AddonManager, controllerContext *controllercmd.ControllerContext,
 ) error {
-	return policyaddon.GetAndAddAgent(ctx, mgr, addonName, controllerContext, GetAgentAddon)
+	agentAddon, err := getAgentAddon(ctx, controllerContext)
+	if err != nil {
+		return fmt.Errorf("failed getting the %v agent addon: %w", addonName, err)
+	}
+
+	standaloneAgentAddon := &StandaloneAgentAddon{
+		AgentAddon: agentAddon,
+		manager:    mgr,
+	}
+
+	err = mgr.AddAgent(standaloneAgentAddon)
+	if err != nil {
+		return fmt.Errorf("failed adding the %v agent addon to the manager: %w", addonName, err)
+	}
+
+	return nil
 }
