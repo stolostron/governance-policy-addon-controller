@@ -48,6 +48,12 @@ spec:
         - --log-encoder={{ .Values.args.logEncoder }}
         - --log-level={{ if eq (toString .Values.args.logLevel) "-1" }}error{{ else }}{{ .Values.args.logLevel }}{{end}}
         - --v={{ .Values.args.pkgLogLevel }}
+        {{- if and .Values.prometheus.enabled (eq .Values.hostingKubernetesDistribution "OpenShift") }}
+        - --secure-metrics=true
+        - --metrics-bind-address=0.0.0.0:8443
+        {{- else if .Values.prometheus.enabled }}
+        - --metrics-bind-address=0.0.0.0:8383
+        {{- end }}
         {{- if eq .Values.installMode "Hosted" }}
         - --target-kubeconfig-path=/var/run/managed-kubeconfig/kubeconfig
         {{- end }}
@@ -99,6 +105,17 @@ spec:
           failureThreshold: 30
           periodSeconds: 10
         {{- end }}
+        {{- if and .Values.prometheus.enabled (eq .Values.hostingKubernetesDistribution "OpenShift") }}
+        ports:
+        - name: metrics
+          protocol: TCP
+          containerPort: 8443
+        {{- else if .Values.prometheus.enabled }}
+        ports:
+        - name: metrics
+          protocol: TCP
+          containerPort: 8383
+        {{- end }}
         resources: {{- toYaml .Values.resources | nindent 10 }}
         securityContext:
           allowPrivilegeEscalation: false
@@ -119,6 +136,11 @@ spec:
         - name: klusterlet-config
           secret:
             secretName: {{ .Values.hubKubeConfigSecret }}
+        {{- if and .Values.prometheus.enabled (eq .Values.hostingKubernetesDistribution "OpenShift") }}
+        - name: metrics-cert
+          secret:
+            secretName: {{ include "controller.fullname" . }}-metrics
+        {{- end }}
         {{- if eq .Values.installMode "Hosted" }}
         - name: managed-kubeconfig-secret
           secret:

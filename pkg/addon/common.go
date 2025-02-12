@@ -32,8 +32,9 @@ import (
 var log = ctrl.Log.WithName("common")
 
 const (
-	PolicyAddonPauseAnnotation = "policy-addon-pause"
-	PolicyLogLevelAnnotation   = "log-level"
+	PolicyAddonPauseAnnotation  = "policy-addon-pause"
+	PolicyLogLevelAnnotation    = "log-level"
+	PrometheusEnabledAnnotation = "prometheus-metrics-enabled"
 )
 
 type GlobalValues struct {

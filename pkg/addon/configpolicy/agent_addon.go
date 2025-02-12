@@ -28,7 +28,6 @@ const (
 	evaluationConcurrencyAnnotation  = "policy-evaluation-concurrency"
 	clientQPSAnnotation              = "client-qps"
 	clientBurstAnnotation            = "client-burst"
-	prometheusEnabledAnnotation      = "prometheus-metrics-enabled"
 	operatorPolicyDisabledAnnotation = "operator-policy-disabled"
 	standaloneTemplatingAddonName    = "governance-standalone-hub-templating"
 )
@@ -192,12 +191,12 @@ func getValues(
 			userValues.UserArgs.ClientBurst = userValues.UserArgs.EvaluationConcurrency*22 + 1
 		}
 
-		if val, ok := annotations[prometheusEnabledAnnotation]; ok {
+		if val, ok := annotations[policyaddon.PrometheusEnabledAnnotation]; ok {
 			valBool, err := strconv.ParseBool(val)
 			if err != nil {
 				log.Error(err, fmt.Sprintf(
 					"Failed to verify '%s' annotation value '%s' for component %s (falling back to default value %v)",
-					prometheusEnabledAnnotation, val, addonName, userValues.Prometheus["enabled"]),
+					policyaddon.PrometheusEnabledAnnotation, val, addonName, userValues.Prometheus["enabled"]),
 				)
 			} else {
 				userValues.Prometheus["enabled"] = valBool
