@@ -1,15 +1,17 @@
 # Copyright Contributors to the Open Cluster Management project
-
-{{- if ne .Release.Namespace "open-cluster-management-agent-addon" }}
 apiVersion: v1
 kind: Namespace
 metadata:
   name: {{ .Release.Namespace }}
   labels:
+    {{- if ne .Release.Namespace "open-cluster-management-agent-addon" }}
     addon.open-cluster-management.io/namespace: "true"
     addon.open-cluster-management.io/hosted-manifest-location: hosting
-  {{- if eq (.Release.Namespace | trimPrefix "klusterlet-") .Values.clusterName }}
+    {{- end }}
+    {{- if and .Values.prometheus.enabled (eq .Values.hostingKubernetesDistribution "OpenShift") }}
+    openshift.io/cluster-monitoring: "true"
+    {{- end }}
+  {{- if or (eq .Release.Namespace "open-cluster-management-agent-addon") (eq (.Release.Namespace | trimPrefix "klusterlet-") .Values.clusterName) }}
   annotations:
     "addon.open-cluster-management.io/deletion-orphan": ""
   {{- end }}
-{{- end }}
