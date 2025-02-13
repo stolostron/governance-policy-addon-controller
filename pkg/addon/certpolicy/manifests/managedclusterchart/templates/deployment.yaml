@@ -125,6 +125,11 @@ spec:
           privileged: false
           readOnlyRootFilesystem: true
         volumeMounts:
+          {{- if and .Values.prometheus.enabled (eq .Values.hostingKubernetesDistribution "OpenShift") }}
+          - mountPath: "/var/run/metrics-cert"
+            name: metrics-cert
+            readOnly: true
+          {{- end }}
           - name: klusterlet-config
             mountPath: /var/run/klusterlet
           {{- if eq .Values.installMode "Hosted" }}
