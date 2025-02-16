@@ -10,7 +10,7 @@ require (
 	github.com/openshift/library-go v0.0.0-20240116081341-964bcb3f545c
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.74.0
 	github.com/spf13/cobra v1.8.0
-	github.com/spf13/pflag v1.0.5
+	github.com/spf13/pflag v1.0.6
 	github.com/stolostron/go-log-utils v0.1.3
 	go.uber.org/zap v1.27.0
 	k8s.io/apimachinery v0.29.5
