@@ -13,26 +13,20 @@ args:
   logEncoder: console
 hubKubeConfigSecret: cert-policy-controller-hub-kubeconfig
 
-resources:
-  requests:
-    memory: "150Mi"
-  limits:
-    memory: "300Mi"
-
 affinity: {}
 
 tolerations:
-- effect: NoSchedule
-  key: dedicated
-  operator: Exists
-- key: CriticalAddonsOnly
-  operator: Exists
-- effect: NoSchedule
-  key: node.kubernetes.io/not-ready
-  operator: Exists
-- key: node-role.kubernetes.io/infra
-  operator: Exists
-  effect: NoSchedule
+  - effect: NoSchedule
+    key: dedicated
+    operator: Exists
+  - key: CriticalAddonsOnly
+    operator: Exists
+  - effect: NoSchedule
+    key: node.kubernetes.io/not-ready
+    operator: Exists
+  - key: node-role.kubernetes.io/infra
+    operator: Exists
+    effect: NoSchedule
 
 clusterName: null
 managedKubeConfigSecret: null
@@ -51,6 +45,12 @@ prometheus:
     namespace: null
 
 global:
+  resourceRequirements:
+    - containerIDRegex: ^.+:.+:.+$
+      requests:
+        memory: "150Mi"
+      limits:
+        memory: "300Mi"
   imagePullPolicy: IfNotPresent
   imagePullSecret: open-cluster-management-image-pull-credentials
   imageOverrides:

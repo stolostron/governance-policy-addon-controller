@@ -5,15 +5,21 @@ metadata:
   namespace: open-cluster-management
 spec:
   resourceRequirements:
-  - containerID: "deployments:config-policy-controller:*"
-    resources:
-      requests:
-        memory: 75Mi
-      limits:
-        memory: 150Mi
-  - containerID: "deployments:governance-policy-framework:*"
-    resources:
-      requests:
-        memory: 50Mi
-      limits:
-        memory: 100Mi
+    - containerID: "deployments:cert-policy-controller:*"
+      resources:
+        requests:
+          memory: 60Mi
+        limits:
+          memory: 120Mi
+    - containerID: "deployments:config-policy-controller:*"
+      resources:
+        requests:
+          memory: 75Mi
+        limits:
+          memory: 150Mi
+    - containerID: "deployments:governance-policy-framework:*"
+      resources:
+        requests:
+          memory: 50Mi
+        limits:
+          memory: 100Mi
