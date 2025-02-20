@@ -170,6 +170,10 @@ var _ = Describe("Test cert-policy-controller deployment", Ordered, func() {
 	It("should create a cert-policy-controller deployment with resource requirements on the managed cluster",
 		func(ctx SpecContext) {
 			deploymentConfigTests := map[string]map[string]interface{}{
+				"../resources/addondeploymentconfig_empty.yaml": {
+					"requests": map[string]interface{}{"memory": "150Mi"},
+					"limits":   map[string]interface{}{"memory": "300Mi"},
+				},
 				"../resources/addondeploymentconfig_resourceRequirements_individual.yaml": {
 					"requests": map[string]interface{}{"memory": "60Mi"},
 					"limits":   map[string]interface{}{"memory": "120Mi"},
