@@ -47,10 +47,11 @@ prometheus:
 global:
   resourceRequirements:
     - containerIDRegex: ^.+:.+:.+$
-      requests:
-        memory: "150Mi"
-      limits:
-        memory: "300Mi"
+      resources:
+        requests:
+          memory: "150Mi"
+        limits:
+          memory: "300Mi"
   imagePullPolicy: IfNotPresent
   imagePullSecret: open-cluster-management-image-pull-credentials
   imageOverrides:
