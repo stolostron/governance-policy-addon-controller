@@ -9,8 +9,8 @@ require (
 	github.com/onsi/gomega v1.33.1
 	github.com/openshift/library-go v0.0.0-20240621150525-4bb4238aef81
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.74.0
-	github.com/spf13/cobra v1.8.0
-	github.com/spf13/pflag v1.0.5
+	github.com/spf13/cobra v1.9.1
+	github.com/spf13/pflag v1.0.6
 	github.com/stolostron/go-log-utils v0.1.3
 	go.uber.org/zap v1.27.0
 	k8s.io/apimachinery v0.30.2
