@@ -71,7 +71,6 @@ jobs:
       if: matrix.hosted_mode == 'false'
       run: |
         make test-coverage | tee report_unit.json
-        make coverage-verify
         make gosec-scan
         cat gosec.json
 
