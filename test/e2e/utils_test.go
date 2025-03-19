@@ -5,6 +5,7 @@ package e2e
 import (
 	"bytes"
 	"context"
+	errs "errors"
 	"fmt"
 	"os/exec"
 	"slices"
@@ -75,7 +76,7 @@ func GetWithTimeout(
 			return err
 		}
 		if !wantFound && err == nil {
-			return fmt.Errorf("expected to return IsNotFound error")
+			return errs.New("expected to return IsNotFound error")
 		}
 		if !wantFound && err != nil && !errors.IsNotFound(err) {
 			return err
@@ -113,7 +114,7 @@ func GetWithTimeoutClusterResource(
 			return err
 		}
 		if !wantFound && err == nil {
-			return fmt.Errorf("expected to return IsNotFound error")
+			return errs.New("expected to return IsNotFound error")
 		}
 		if !wantFound && err != nil && !errors.IsNotFound(err) {
 			return err
