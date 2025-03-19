@@ -19,7 +19,7 @@ var _ = Describe("Test ComplianceDBSecretReconciler", Ordered, func() {
 	var routerRsrc dynamic.ResourceInterface
 	var secretRsrc dynamic.ResourceInterface
 
-	BeforeAll(func(ctx context.Context) {
+	BeforeAll(func() {
 		secretRsrc = clientDynamic.Resource(gvrSecret).Namespace(controllerNamespace)
 		routerRsrc = clientDynamic.Resource(complianceapi.RouteGVR).Namespace(controllerNamespace)
 	})
