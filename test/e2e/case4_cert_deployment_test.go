@@ -4,7 +4,6 @@ package e2e
 
 import (
 	"context"
-	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -58,7 +57,7 @@ func verifyCertPolicyDeployment(
 			}
 
 			return available == replicas
-		}, 240, 1).Should(Equal(true))
+		}, 240, 1).Should(BeTrue())
 	}
 
 	By(logPrefix + "verifying a running cert-policy-controller pod")
@@ -79,7 +78,7 @@ func verifyCertPolicyDeployment(
 		)
 
 		return getAddonStatus(addon)
-	}, 240, 1).Should(Equal(true))
+	}, 240, 1).Should(BeTrue())
 }
 
 var _ = Describe("Test cert-policy-controller deployment", Ordered, func() {
@@ -172,7 +171,7 @@ var _ = Describe("Test cert-policy-controller deployment", Ordered, func() {
 			}
 			hubClusterConfig := managedClusterList[0]
 			hubClient := hubClusterConfig.clusterClient
-			installNamespace := fmt.Sprintf("%s-hosted", cluster.clusterName)
+			installNamespace := cluster.clusterName + "-hosted"
 			logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
 
 			setupClusterSecretForHostedMode(
@@ -226,7 +225,7 @@ var _ = Describe("Test cert-policy-controller deployment", Ordered, func() {
 				}
 				hubClusterConfig := managedClusterList[0]
 				hubClient := hubClusterConfig.clusterClient
-				installNamespace := fmt.Sprintf("klusterlet-%s", cluster.clusterName)
+				installNamespace := "klusterlet-" + cluster.clusterName
 				logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
 
 				setupClusterSecretForHostedMode(
@@ -296,7 +295,7 @@ var _ = Describe("Test cert-policy-controller deployment", Ordered, func() {
 				)
 
 				return getAddonStatus(addon)
-			}, 240, 1).Should(Equal(true))
+			}, 240, 1).Should(BeTrue())
 
 			By(logPrefix + "annotating the managedclusteraddon with the " + loggingLevelAnnotation + " annotation")
 			Kubectl("annotate", "-n", cluster.clusterName, "-f", case4ManagedClusterAddOnCR, loggingLevelAnnotation)

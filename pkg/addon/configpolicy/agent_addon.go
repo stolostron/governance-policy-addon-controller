@@ -39,11 +39,11 @@ type UserArgs struct {
 }
 
 type UserValues struct {
-	GlobalValues           policyaddon.GlobalValues `json:"global,"`
+	GlobalValues           policyaddon.GlobalValues `json:"global"`
 	KubernetesDistribution string                   `json:"kubernetesDistribution"`
 	Prometheus             map[string]interface{}   `json:"prometheus"`
 	OperatorPolicy         map[string]interface{}   `json:"operatorPolicy"`
-	UserArgs               UserArgs                 `json:"args,"`
+	UserArgs               UserArgs                 `json:"args"`
 }
 
 // FS go:embed
