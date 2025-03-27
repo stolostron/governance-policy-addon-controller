@@ -105,12 +105,12 @@ clean: kind-bootstrap-delete-clusters ## Clean up generated files.
 ############################################################
 
 .PHONY: manifests
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) rbac:roleName=governance-policy-addon-controller crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+manifests: # controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+	# $(CONTROLLER_GEN) rbac:roleName=governance-policy-addon-controller crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 .PHONY: generate
-generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+generate: # controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+	# $(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 ############################################################
 # e2e test section
