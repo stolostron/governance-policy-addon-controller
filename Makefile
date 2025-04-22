@@ -177,7 +177,7 @@ kind-delete-cluster: ## Delete a kind cluster.
 	-rm $(KIND_KUBECONFIG_INTERNAL)
 
 OCM_REPO = $(PWD)/.go/ocm
-OCM_BRANCH = backplane-2.8
+OCM_BRANCH = backplane-2.9
 OCM_REGISTRY = quay.io/stolostron
 $(OCM_REPO):
 	# Verifying latest OCM repo. (Remove this check for non-current releases.) ...
