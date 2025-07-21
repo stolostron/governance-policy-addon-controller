@@ -76,7 +76,7 @@ gosec-scan:
 
 .PHONY: build
 build: ## Build manager binary.
-	CGO_ENABLED=1 go build -o build/_output/bin/$(IMG) main.go
+	CGO_ENABLED=1 go build -mod=readonly -o build/_output/bin/$(IMG) main.go
 
 ############################################################
 # images section
@@ -285,8 +285,9 @@ e2e-run-instrumented: e2e-build-instrumented
 
 .PHONY: e2e-stop-instrumented
 e2e-stop-instrumented:
-	ps -ef | grep '$(IMG)' | grep -v grep | awk '{print $$2}' | xargs kill -s SIGUSR1
+	-ps -ef | grep '$(IMG)' | grep -v grep | awk '{print $$2}' | xargs kill -s SIGUSR1
 	sleep 5 # wait for tests to gracefully shut down
+	-KUBECONFIG=$(KIND_KUBECONFIG) kubectl delete -n open-cluster-management lease governance-policy-addon-controller-lock
 	-ps -ef | grep '$(IMG)' | grep -v grep | awk '{print $$2}' | xargs kill
 
 .PHONY: e2e-debug
