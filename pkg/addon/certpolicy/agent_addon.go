@@ -31,11 +31,11 @@ const (
 var log = ctrl.Log.WithName("certpolicy")
 
 type UserValues struct {
-	GlobalValues                  policyaddon.GlobalValues `json:"global,"`
+	GlobalValues                  policyaddon.GlobalValues `json:"global"`
 	KubernetesDistribution        string                   `json:"kubernetesDistribution"`
 	HostingKubernetesDistribution string                   `json:"hostingKubernetesDistribution"`
 	Prometheus                    map[string]interface{}   `json:"prometheus"`
-	UserArgs                      policyaddon.UserArgs     `json:"args,"`
+	UserArgs                      policyaddon.UserArgs     `json:"args"`
 }
 
 // FS go:embed
