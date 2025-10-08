@@ -141,4 +141,7 @@ require (
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
-replace github.com/imdario/mergo => github.com/imdario/mergo v0.3.16 // Replaced so that 'go get -u' works. Remove/bump when upgrading.
+replace (
+	github.com/imdario/mergo => github.com/imdario/mergo v0.3.16 // Replaced so that 'go get -u' works. Remove/bump when upgrading.
+	helm.sh/helm/v3 => helm.sh/helm/v3 v3.17.4 // fix CVE-2025-53547: use v3.17.4+ or v3.18.4+
+)
