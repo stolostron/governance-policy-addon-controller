@@ -89,7 +89,7 @@ jobs:
         matrix.kind == 'latest' &&
         matrix.hosted_mode == 'false' &&
         github.repository_owner == 'stolostron'
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: artifacts
         path: |
