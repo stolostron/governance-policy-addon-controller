@@ -29,8 +29,8 @@ jobs:
           - 'minimum'
           - 'latest'
         hosted_mode:
-          - "true"
-          - "false"
+          - "hosted"
+          - ""
     name: KinD tests
     steps:
     - name: Checkout
@@ -44,7 +44,7 @@ jobs:
     - name: Create KinD Cluster (${{ matrix.kind }}) and deploy components
       env:
         KIND_VERSION: ${{ matrix.kind }}
-        HOSTED_MODE: ${{ matrix.hosted_mode }}
+        HOSTED_MODE: ${{ matrix.hosted_mode == 'hosted' && 'true' || 'false' }}
       run: |
         ./build/manage-clusters.sh
 
@@ -53,14 +53,14 @@ jobs:
         make kind-controller-kubeconfig
         make kind-ensure-sa
 
-    - if: matrix.hosted_mode == 'false'
+    - if: matrix.hosted_mode == ''
       name: E2E tests
       run: |
         export GOPATH=$(go env GOPATH)
         make wait-for-work-agent
         make e2e-test-coverage
 
-    - if: matrix.hosted_mode == 'true'
+    - if: matrix.hosted_mode == 'hosted'
       name: E2E tests hosted mode
       run: |
         export GOPATH=$(go env GOPATH)
@@ -68,7 +68,7 @@ jobs:
         make e2e-test-hosted-mode
 
     - name: Test Coverage and Report Generation
-      if: matrix.hosted_mode == 'false'
+      if: matrix.hosted_mode == ''
       run: |
         make test-coverage | tee report_unit.json
         make gosec-scan
@@ -77,7 +77,7 @@ jobs:
     - name: Store the GitHub triggering event for the sonarcloud workflow
       if: |
         matrix.kind == 'latest' &&
-        matrix.hosted_mode == 'false' &&
+        matrix.hosted_mode == '' &&
         github.repository_owner == 'stolostron'
       env:
         EVENT_JSON: ${{ toJSON(github.event) }}
@@ -87,7 +87,7 @@ jobs:
     - name: Upload artifacts for the sonarcloud workflow
       if: |
         matrix.kind == 'latest' &&
-        matrix.hosted_mode == 'false' &&
+        matrix.hosted_mode == '' &&
         github.repository_owner == 'stolostron'
       uses: actions/upload-artifact@v6
       with:
