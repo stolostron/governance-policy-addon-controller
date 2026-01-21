@@ -47,8 +47,9 @@ type UserArgs struct {
 }
 
 type UserValues struct {
+	UserArgs `json:",inline"`
+
 	GlobalValues GlobalValues `json:"global"`
-	UserArgs     UserArgs     `json:"args"`
 }
 
 var Scheme = runtime.NewScheme()
