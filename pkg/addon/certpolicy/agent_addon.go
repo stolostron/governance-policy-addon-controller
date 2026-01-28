@@ -65,10 +65,10 @@ func getValues(
 				ImageOverrides: map[string]string{
 					"cert_policy_controller": os.Getenv("CERT_POLICY_CONTROLLER_IMAGE"),
 				},
-				ProxyConfig: map[string]string{
-					"HTTP_PROXY":  "",
-					"HTTPS_PROXY": "",
-					"NO_PROXY":    "",
+				ProxyConfig: &policyaddon.ProxyConfig{
+					HTTPProxy:  "",
+					HTTPSProxy: "",
+					NoProxy:    "",
 				},
 			},
 			Prometheus: map[string]interface{}{},
@@ -111,29 +111,20 @@ func getValues(
 		}
 
 		if val, ok := annotations[policyaddon.PolicyLogLevelAnnotation]; ok {
-			logLevel := policyaddon.GetLogLevel(addonName, val)
-			userValues.UserArgs.LogLevel = logLevel
-			userValues.UserArgs.PkgLogLevel = logLevel - 2
+			logLevel, err := policyaddon.GetLogLevel(val)
+			if err != nil {
+				log.Error(err, fmt.Sprintf(
+					"Failed to verify '%s' annotation value '%s' for component %s (falling back to default value %v)",
+					policyaddon.PolicyLogLevelAnnotation, val, addonName, userValues.UserArgs.LogLevel),
+				)
+			} else {
+				userValues.UserArgs.LogLevel = logLevel
+				userValues.UserArgs.PkgLogLevel = logLevel - 2
+			}
 		}
 
 		return addonfactory.JsonStructToValues(userValues)
 	}
-}
-
-// mandateValues sets deployment variables regardless of user overrides. As a result, caution should
-// be taken when adding settings to this function.
-func mandateValues(
-	cluster *clusterv1.ManagedCluster,
-	_ *addonapiv1alpha1.ManagedClusterAddOn,
-) (addonfactory.Values, error) {
-	values := addonfactory.Values{}
-
-	// Don't allow replica overrides for older Kubernetes
-	if policyaddon.IsOldKubernetes(cluster) {
-		values["replicas"] = 1
-	}
-
-	return values, nil
 }
 
 func GetAgentAddon(ctx context.Context, controllerContext *controllercmd.ControllerContext) (agent.AgentAddon, error) {
@@ -169,7 +160,6 @@ func GetAgentAddon(ctx context.Context, controllerContext *controllercmd.Control
 			),
 			getValues(clusterInformer.Lister()),
 			addonfactory.GetValuesFromAddonAnnotation,
-			mandateValues,
 		).
 		WithManagedClusterClient(clusterClient).
 		WithAgentRegistrationOption(registrationOption).

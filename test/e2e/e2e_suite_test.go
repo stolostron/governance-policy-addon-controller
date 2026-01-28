@@ -114,6 +114,7 @@ var _ = BeforeSuite(func(ctx SpecContext) {
 		case1ManagedClusterAddOnName:           case1ClusterManagementAddOnCRDefault,
 		case2ManagedClusterAddOnName:           case2ClusterManagementAddOnCRDefault,
 		"governance-standalone-hub-templating": case3ClusterManagementAddOnDefaultCR,
+		case4ManagedClusterAddOnName:           case4ClusterManagementAddOnCRDefault,
 	}
 
 	for addonName, addonCR := range addonMap {

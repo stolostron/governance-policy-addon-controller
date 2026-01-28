@@ -84,19 +84,14 @@ func verifyCertPolicyDeployment(
 	}, 240, 1).Should(BeTrue())
 }
 
-var _ = Describe("Test cert-policy-controller deployment", Ordered, func() {
-	BeforeAll(func() {
-		By("Deploying the default cert-policy-controller ClusterManagementAddon to the hub cluster")
-		Kubectl("apply", "-f", case4ClusterManagementAddOnCRDefault)
-	})
-
-	AfterAll(func() {
+var _ = Describe("Test cert-policy-controller deployment", func() {
+	AfterEach(func() {
 		if CurrentSpecReport().Failed() {
 			debugCollection(case4PodSelector)
 		}
 
-		By("Deleting the default cert-policy-controller ClusterManagementAddon from the hub cluster")
-		Kubectl("delete", "-f", case4ClusterManagementAddOnCRDefault)
+		By("Restoring the default cert-policy-controller ClusterManagementAddon on the hub cluster")
+		Kubectl("apply", "-f", case4ClusterManagementAddOnCRDefault)
 	})
 
 	It("should create the default cert-policy-controller deployment on the managed cluster", func(ctx SpecContext) {
@@ -291,7 +286,7 @@ var _ = Describe("Test cert-policy-controller deployment", Ordered, func() {
 	It("should create the default cert-policy-controller deployment in hosted mode in klusterlet agent namespace",
 		Label("hosted-mode"), func(ctx SpecContext) {
 			By("Creating the AddOnDeploymentConfig")
-			Kubectl("apply", "-f", addOnDeploymentConfigWithCustomVarsCR)
+			Kubectl("apply", "-f", addOnDeploymentConfigWithManagedKubeconfigCR)
 			By("Applying the cert-policy-controller ClusterManagementAddOn to use the AddOnDeploymentConfig")
 			Kubectl("apply", "-f", case4ClusterManagementAddOnCR)
 
@@ -363,7 +358,7 @@ var _ = Describe("Test cert-policy-controller deployment", Ordered, func() {
 				Expect(namespace).To(BeNil())
 			}
 			By("Deleting the AddOnDeploymentConfig")
-			Kubectl("delete", "-f", addOnDeploymentConfigWithCustomVarsCR)
+			Kubectl("delete", "-f", addOnDeploymentConfigWithManagedKubeconfigCR)
 			By("Restoring the cert-policy-controller ClusterManagementAddOn")
 			Kubectl("apply", "-f", case4ClusterManagementAddOnCRDefault)
 		})
