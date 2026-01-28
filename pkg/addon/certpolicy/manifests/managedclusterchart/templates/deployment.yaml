@@ -36,18 +36,18 @@ spec:
         args:
         - --enable-lease=true
         - --cluster-name={{ .Values.clusterName }}
-        {{- if .Values.args.frequency }}
-        - --update-frequency={{ .Values.args.frequency }}
+        {{- if .Values.updateFrequency }}
+        - --update-frequency={{ .Values.updateFrequency }}
         {{- end }}
-        {{- if .Values.args.defaultDuration }}
-        - --default-duration={{ .Values.args.defaultDuration }}
+        {{- if .Values.defaultDuration }}
+        - --default-duration={{ .Values.defaultDuration }}
         {{- end }}
         {{- if eq (.Values.replicas | int) 1 }}
         - '--leader-elect=false'
         {{- end }}
-        - --log-encoder={{ .Values.args.logEncoder }}
-        - --log-level={{ if eq (toString .Values.args.logLevel) "-1" }}error{{ else }}{{ .Values.args.logLevel }}{{end}}
-        - --v={{ .Values.args.pkgLogLevel }}
+        - --log-encoder={{ .Values.logEncoder }}
+        - --log-level={{ if eq (toString .Values.logLevel) "-1" }}error{{ else }}{{ .Values.logLevel }}{{end}}
+        - --v={{ .Values.pkgLogLevel }}
         {{- if and .Values.prometheus.enabled (eq .Values.hostingKubernetesDistribution "OpenShift") }}
         - --secure-metrics=true
         - --metrics-bind-address=0.0.0.0:8443
