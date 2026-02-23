@@ -26,83 +26,83 @@ jobs:
         # The "minimum" tag is set in the Makefile
         # KinD tags: https://hub.docker.com/r/kindest/node/tags
         kind:
-          - 'minimum'
-          - 'latest'
+          - "minimum"
+          - "latest"
         hosted_mode:
           - "true"
           - "false"
     name: KinD tests
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version-file: go.mod
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
 
-    - name: Create KinD Cluster (${{ matrix.kind }}) and deploy components
-      env:
-        KIND_VERSION: ${{ matrix.kind }}
-        HOSTED_MODE: ${{ matrix.hosted_mode }}
-      run: |
-        ./build/manage-clusters.sh
+      - name: Create KinD Cluster (${{ matrix.kind }}) and deploy components
+        env:
+          KIND_VERSION: ${{ matrix.kind }}
+          HOSTED_MODE: ${{ matrix.hosted_mode }}
+        run: |
+          ./build/manage-clusters.sh
 
-    - name: Ensure Service Account kubeconfig
-      run: |
-        make kind-controller-kubeconfig
-        make kind-ensure-sa
+      - name: Ensure Service Account kubeconfig
+        run: |
+          make kind-controller-kubeconfig
+          make kind-ensure-sa
 
-    - if: matrix.hosted_mode == 'false'
-      name: E2E tests
-      run: |
-        export GOPATH=$(go env GOPATH)
-        make wait-for-work-agent
-        make e2e-test-coverage
+      - if: matrix.hosted_mode == 'false'
+        name: E2E tests
+        run: |
+          export GOPATH=$(go env GOPATH)
+          make wait-for-work-agent
+          make e2e-test-coverage
 
-    - if: matrix.hosted_mode == 'true'
-      name: E2E tests hosted mode
-      run: |
-        export GOPATH=$(go env GOPATH)
-        make wait-for-work-agent
-        make e2e-test-hosted-mode
+      - if: matrix.hosted_mode == 'true'
+        name: E2E tests hosted mode
+        run: |
+          export GOPATH=$(go env GOPATH)
+          make wait-for-work-agent
+          make e2e-test-hosted-mode
 
-    - name: Test Coverage and Report Generation
-      if: matrix.hosted_mode == 'false'
-      run: |
-        make test-coverage | tee report_unit.json
-        make gosec-scan
-        cat gosec.json
+      - name: Test Coverage and Report Generation
+        if: matrix.hosted_mode == 'false'
+        run: |
+          make test-coverage | tee report_unit.json
+          make gosec-scan
+          cat gosec.json
 
-    - name: Store the GitHub triggering event for the sonarcloud workflow
-      if: |
-        matrix.kind == 'latest' &&
-        matrix.hosted_mode == 'false' &&
-        github.repository_owner == 'stolostron'
-      run: |
-        cat <<EOF > event.json
-        ${{ toJSON(github.event) }}
-        EOF
+      - name: Store the GitHub triggering event for the sonarcloud workflow
+        if: |
+          matrix.kind == 'latest' &&
+          matrix.hosted_mode == 'false' &&
+          github.repository_owner == 'stolostron'
+        env:
+          EVENT_JSON: ${{ toJSON(github.event) }}
+        run: |
+          printf '%s' "${EVENT_JSON}" > event.json
 
-    - name: Upload artifacts for the sonarcloud workflow
-      if: |
-        matrix.kind == 'latest' &&
-        matrix.hosted_mode == 'false' &&
-        github.repository_owner == 'stolostron'
-      uses: actions/upload-artifact@v4
-      with:
-        name: artifacts
-        path: |
-          coverage*.out
-          event.json
-          gosec.json
+      - name: Upload artifacts for the sonarcloud workflow
+        if: |
+          matrix.kind == 'latest' &&
+          matrix.hosted_mode == 'false' &&
+          github.repository_owner == 'stolostron'
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts
+          path: |
+            coverage*.out
+            event.json
+            gosec.json
 
-    - name: Debug
-      if: ${{ failure() }}
-      run: |
-        RUN_MODE="debug" ./build/manage-clusters.sh
+      - name: Debug
+        if: ${{ failure() }}
+        run: |
+          RUN_MODE="debug" ./build/manage-clusters.sh
 
-    - name: Clean up clusters
-      if: ${{ always() }}
-      run: |
-        RUN_MODE="delete" ./build/manage-clusters.sh
+      - name: Clean up clusters
+        if: ${{ always() }}
+        run: |
+          RUN_MODE="delete" ./build/manage-clusters.sh
