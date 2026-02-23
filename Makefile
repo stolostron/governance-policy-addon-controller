@@ -18,14 +18,16 @@ HUB_KUBECONFIG ?= $(PWD)/kubeconfig_$(HUB_CLUSTER_NAME)_e2e
 HUB_KUBECONFIG_INTERNAL ?= $(HUB_KUBECONFIG)-internal
 
 # Image URL to use all building/pushing image targets;
-# Use your own docker registry and image name for dev/test by overridding the IMG and REGISTRY environment variable.
+# Use your own docker registry and image name for dev/test by overriding the IMG and REGISTRY environment variable.
 IMG ?= $(CONTROLLER_NAME)
-REGISTRY ?= quay.io/stolostron
 RELEASE_BRANCH ?= main
-ifneq ($(RELEASE_BRANCH), main)
-  TAG ?= latest-$(subst release-,,$(RELEASE_BRANCH))
+TAG ?= latest
+ifeq ($(RELEASE_BRANCH), main)
+  REGISTRY ?= quay.io/stolostron
 else
-  TAG ?= latest
+  REGISTRY ?= quay.io/redhat-user-workloads/crt-redhat-acm-tenant
+  RELEASE_VERSION := $(subst release-,,$(RELEASE_BRANCH))
+  IMAGE_SUFFIX ?= -acm-$(subst .,,$(RELEASE_VERSION))
 endif
 VERSION ?= $(shell cat COMPONENT_VERSION 2> /dev/null)
 IMAGE_NAME_AND_VERSION ?= $(REGISTRY)/$(IMG)
@@ -276,9 +278,9 @@ COVERAGE_E2E_OUT ?= coverage_e2e.out
 LOG_REDIRECT ?= &>build/_output/controller.log
 e2e-run-instrumented: e2e-build-instrumented
 	-KUBECONFIG=$(KIND_KUBECONFIG) kubectl create ns $(CONTROLLER_NAMESPACE)
-	  CERT_POLICY_CONTROLLER_IMAGE="$(REGISTRY)/cert-policy-controller:$(TAG)" \
-	  CONFIG_POLICY_CONTROLLER_IMAGE="$(REGISTRY)/config-policy-controller:$(TAG)" \
-	  GOVERNANCE_POLICY_FRAMEWORK_ADDON_IMAGE="$(REGISTRY)/governance-policy-framework-addon:$(TAG)" \
+	  CERT_POLICY_CONTROLLER_IMAGE="$(REGISTRY)/cert-policy-controller$(IMAGE_SUFFIX):$(TAG)" \
+	  CONFIG_POLICY_CONTROLLER_IMAGE="$(REGISTRY)/config-policy-controller$(IMAGE_SUFFIX):$(TAG)" \
+	  GOVERNANCE_POLICY_FRAMEWORK_ADDON_IMAGE="$(REGISTRY)/governance-policy-framework-addon$(IMAGE_SUFFIX):$(TAG)" \
 	  ./build/_output/bin/$(IMG)-instrumented -test.v -test.run="^TestRunMain$$" -test.coverprofile=$(COVERAGE_E2E_OUT) \
 	  --kubeconfig="$(KIND_KUBECONFIG_SA)" $(LOG_REDIRECT) &
 
