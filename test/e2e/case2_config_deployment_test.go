@@ -318,7 +318,7 @@ var _ = Describe("Test config-policy-controller deployment", func() {
 					)
 				})
 
-				installNamespace := cluster.clusterName + "-hosted"
+				installNamespace := "klusterlet-" + cluster.clusterName
 
 				setupClusterSecretForHostedMode(
 					ctx, logPrefix, hubClient, "config-policy-controller-managed-kubeconfig",
@@ -326,7 +326,7 @@ var _ = Describe("Test config-policy-controller deployment", func() {
 
 				installAddonInHostedMode(
 					ctx, logPrefix, hubClient, case2ManagedClusterAddOnName,
-					cluster.clusterName, hubClusterConfig.clusterName, installNamespace, nil)
+					cluster.clusterName, hubClusterConfig.clusterName, nil)
 
 				// Use i+1 since the for loop ranges over a slice skipping first index
 				verifyConfigPolicyDeployment(ctx, logPrefix, hubClient, cluster.clusterName, installNamespace, i+1)
@@ -379,7 +379,7 @@ var _ = Describe("Test config-policy-controller deployment", func() {
 
 				installAddonInHostedMode(
 					ctx, logPrefix, hubClient, case2ManagedClusterAddOnName,
-					cluster.clusterName, hubClusterConfig.clusterName, installNamespace, nil)
+					cluster.clusterName, hubClusterConfig.clusterName, nil)
 
 				// Use i+1 since the for loop ranges over a slice skipping first index
 				verifyConfigPolicyDeployment(ctx, logPrefix, hubClient, cluster.clusterName, installNamespace, i+1)

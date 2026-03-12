@@ -120,7 +120,7 @@ var _ = Describe("Test framework deployment", func() {
 			}
 			hubClusterConfig := managedClusterList[0]
 			hubClient := hubClusterConfig.clusterClient
-			installNamespace := cluster.clusterName + "-hosted"
+			installNamespace := "klusterlet-" + cluster.clusterName
 
 			logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
 
@@ -147,7 +147,7 @@ var _ = Describe("Test framework deployment", func() {
 
 			installAddonInHostedMode(
 				ctx, logPrefix, hubClient, case1ManagedClusterAddOnName,
-				cluster.clusterName, hubClusterConfig.clusterName, installNamespace, map[string]string{
+				cluster.clusterName, hubClusterConfig.clusterName, map[string]string{
 					"addon.open-cluster-management.io/on-multicluster-hub": "true",
 				})
 
@@ -209,13 +209,13 @@ var _ = Describe("Test framework deployment", func() {
 				}
 				hubClusterConfig := managedClusterList[0]
 				hubClient := hubClusterConfig.clusterClient
-				installNamespace := cluster.clusterName + "-hosted"
+				installNamespace := "klusterlet-" + cluster.clusterName
 
 				logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
 
 				installAddonInHostedMode(
 					ctx, logPrefix, hubClient, case1ManagedClusterAddOnName,
-					cluster.clusterName, hubClusterConfig.clusterName, installNamespace, nil)
+					cluster.clusterName, hubClusterConfig.clusterName, nil)
 
 				// Use i+1 since the for loop ranges over a slice skipping first index
 				checkContainersAndAvailabilityInNamespace(ctx, cluster, i+1, installNamespace)
@@ -973,7 +973,7 @@ func startupProbeInCluster(clusterIdx int) bool {
 
 func installAddonInHostedMode(
 	ctx context.Context, logPrefix string, hubClient dynamic.Interface, addOnName, clusterName,
-	hostingClusterName, installNamespace string, moreAnnotations map[string]string,
+	hostingClusterName string, moreAnnotations map[string]string,
 ) {
 	By(logPrefix + "deploying the " + addOnName + " ManagedClusterAddOn in hosted mode")
 
@@ -985,9 +985,6 @@ func installAddonInHostedMode(
 			"annotations": map[string]interface{}{
 				"addon.open-cluster-management.io/hosting-cluster-name": hostingClusterName,
 			},
-		},
-		"spec": map[string]interface{}{
-			"installNamespace": installNamespace,
 		},
 	}}
 

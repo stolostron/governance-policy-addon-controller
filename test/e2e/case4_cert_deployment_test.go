@@ -248,7 +248,7 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 				}
 				hubClusterConfig := managedClusterList[0]
 				hubClient := hubClusterConfig.clusterClient
-				installNamespace := cluster.clusterName + "-hosted"
+				installNamespace := "klusterlet-" + cluster.clusterName
 				logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
 
 				setupClusterSecretForHostedMode(
@@ -257,7 +257,7 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 
 				installAddonInHostedMode(
 					ctx, logPrefix, hubClient, case4ManagedClusterAddOnName,
-					cluster.clusterName, hubClusterConfig.clusterName, installNamespace, nil)
+					cluster.clusterName, hubClusterConfig.clusterName, nil)
 
 				// Use i+1 since the for loop ranges over a slice skipping first index
 				verifyCertPolicyDeployment(ctx, logPrefix, hubClient, cluster.clusterName, installNamespace, i+1)
@@ -311,7 +311,7 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 
 				installAddonInHostedMode(
 					ctx, logPrefix, hubClient, case4ManagedClusterAddOnName,
-					cluster.clusterName, hubClusterConfig.clusterName, installNamespace, nil)
+					cluster.clusterName, hubClusterConfig.clusterName, nil)
 
 				// Use i+1 since the for loop ranges over a slice skipping first index
 				verifyCertPolicyDeployment(ctx, logPrefix, hubClient, cluster.clusterName, installNamespace, i+1)
