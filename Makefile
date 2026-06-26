@@ -230,7 +230,10 @@ wait-for-work-agent: $(KIND_KUBECONFIG) ## Wait for the klusterlet work agent to
 .PHONY: kind-run-local
 kind-run-local: manifests generate fmt vet $(KIND_KUBECONFIG) ## Run the policy-addon-controller locally against the kind cluster.
 	-KUBECONFIG=$(KIND_KUBECONFIG) kubectl create ns $(CONTROLLER_NAMESPACE)
-	go run ./main.go controller --kubeconfig=$(KIND_KUBECONFIG) --namespace $(CONTROLLER_NAMESPACE)
+	CERT_POLICY_CONTROLLER_IMAGE="$(REGISTRY)/cert-policy-controller$(IMAGE_SUFFIX):$(TAG)" \
+	  CONFIG_POLICY_CONTROLLER_IMAGE="$(REGISTRY)/config-policy-controller$(IMAGE_SUFFIX):$(TAG)" \
+	  GOVERNANCE_POLICY_FRAMEWORK_ADDON_IMAGE="$(REGISTRY)/governance-policy-framework-addon$(IMAGE_SUFFIX):$(TAG)" \
+	  go run ./main.go --kubeconfig=$(KIND_KUBECONFIG) --namespace $(CONTROLLER_NAMESPACE)
 
 .PHONY: kind-load-image
 kind-load-image: build-images $(KIND_KUBECONFIG) ## Build and load the docker image into kind.
