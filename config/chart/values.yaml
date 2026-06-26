@@ -1,0 +1,40 @@
+# Default values for governance-policy-addon-controller.
+
+# Aligned OCM version (used at release time for NOTES.txt)
+ocm_version: v0.0
+
+namespace: open-cluster-management
+
+image:
+  repository: quay.io/stolostron/governance-policy-addon-controller
+  tag: latest
+  pullPolicy: Always
+imagePullSecrets: []
+
+env:
+  certPolicyControllerImage: quay.io/stolostron/cert-policy-controller:latest
+  configPolicyControllerImage: quay.io/stolostron/config-policy-controller:latest
+  governancePolicyFrameworkAddonImage: quay.io/stolostron/governance-policy-framework-addon:latest
+
+resources:
+  requests:
+    cpu: 25m
+    memory: 64Mi
+
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+podAnnotations: {}
+podLabels: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
