@@ -50,7 +50,6 @@ rules:
   - config-policy-controller
   - governance-policy-framework
   - governance-standalone-hub-templating
-  - iam-policy-controller
   resources:
   - clustermanagementaddons/finalizers
   - managedclusteraddons/finalizers
@@ -86,7 +85,6 @@ rules:
   - config-policy-controller
   - governance-policy-framework
   - governance-standalone-hub-templating
-  - iam-policy-controller
   resources:
   - managedclusteraddons
   verbs:
