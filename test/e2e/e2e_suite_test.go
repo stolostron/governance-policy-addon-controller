@@ -22,38 +22,35 @@ import (
 )
 
 const (
-	addonNamespace                               string = "open-cluster-management-agent-addon"
-	kubeconfigFilename                           string = "../../kubeconfig_cluster"
-	loggingLevelAnnotation                       string = "log-level=8"
-	evaluationConcurrencyAnnotation              string = "policy-evaluation-concurrency=5"
-	clientQPSAnnotation                          string = "client-qps=50"
-	prometheusEnabledAnnotation                  string = "prometheus-metrics-enabled=true"
-	opPolicyEnabledAnnotation                    string = "operator-policy-disabled=false"
-	agentInstallNs                               string = "test-install-ns"
-	addOnDeploymentConfigCR                      string = "../resources/addondeploymentconfig.yaml"
-	addOnDeploymentConfigWithAgentInstallNs      string = "../resources/addondeploymentconfig_agentInstallNs.yaml"
-	addOnDeploymentConfigWithCustomVarsCR        string = "../resources/addondeploymentconfig_customvars.yaml"
-	addOnDeploymentConfigWithManagedKubeconfigCR string = "../resources/" +
-		"addondeploymentconfig_customvars_managedKubeconfig.yaml"
+	addonNamespace                          string = "open-cluster-management-agent-addon"
+	kubeconfigFilename                      string = "../../kubeconfig_cluster"
+	loggingLevelAnnotation                  string = "log-level=8"
+	evaluationConcurrencyAnnotation         string = "policy-evaluation-concurrency=5"
+	clientQPSAnnotation                     string = "client-qps=50"
+	prometheusEnabledAnnotation             string = "prometheus-metrics-enabled=true"
+	opPolicyEnabledAnnotation               string = "operator-policy-disabled=false"
+	addOnDeploymentConfigCR                 string = "../resources/addondeploymentconfig.yaml"
+	addOnDeploymentConfigWithCustomVarsCR   string = "../resources/addondeploymentconfig_customvars.yaml"
+	addOnDeploymentConfigWithAgentInstallNs string = "../resources/addondeploymentconfig_agentInstallNs.yaml"
+	agentInstallNs                          string = "test-install-ns"
 )
 
 var (
-	gvrDeployment             schema.GroupVersionResource
-	gvrPod                    schema.GroupVersionResource
-	gvrNamespace              schema.GroupVersionResource
-	gvrClusterManagementAddOn schema.GroupVersionResource
-	gvrManagedClusterAddOn    schema.GroupVersionResource
-	gvrManagedCluster         schema.GroupVersionResource
-	gvrManifestWork           schema.GroupVersionResource
-	gvrSecret                 schema.GroupVersionResource
-	gvrServiceMonitor         schema.GroupVersionResource
-	gvrService                schema.GroupVersionResource
-	gvrClusterRole            schema.GroupVersionResource
-	gvrRoleBinding            schema.GroupVersionResource
-	gvrPolicyCrd              schema.GroupVersionResource
-	managedClusterList        []managedClusterConfig
-	clientDynamic             dynamic.Interface
-	hubKubeconfigInternal     []byte
+	gvrDeployment          schema.GroupVersionResource
+	gvrPod                 schema.GroupVersionResource
+	gvrNamespace           schema.GroupVersionResource
+	gvrManagedClusterAddOn schema.GroupVersionResource
+	gvrManagedCluster      schema.GroupVersionResource
+	gvrManifestWork        schema.GroupVersionResource
+	gvrSecret              schema.GroupVersionResource
+	gvrServiceMonitor      schema.GroupVersionResource
+	gvrService             schema.GroupVersionResource
+	gvrClusterRole         schema.GroupVersionResource
+	gvrRoleBinding         schema.GroupVersionResource
+	gvrPolicyCrd           schema.GroupVersionResource
+	managedClusterList     []managedClusterConfig
+	clientDynamic          dynamic.Interface
+	hubKubeconfigInternal  []byte
 )
 
 type managedClusterConfig struct {
@@ -74,9 +71,6 @@ var _ = BeforeSuite(func(ctx SpecContext) {
 	gvrDeployment = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "deployments"}
 	gvrPod = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
 	gvrNamespace = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "namespaces"}
-	gvrClusterManagementAddOn = schema.GroupVersionResource{
-		Group: "addon.open-cluster-management.io", Version: "v1alpha1", Resource: "clustermanagementaddons",
-	}
 	gvrManagedClusterAddOn = schema.GroupVersionResource{
 		Group: "addon.open-cluster-management.io", Version: "v1alpha1", Resource: "managedclusteraddons",
 	}
@@ -109,25 +103,6 @@ var _ = BeforeSuite(func(ctx SpecContext) {
 	Expect(err).ToNot(HaveOccurred())
 
 	managedClusterList = getManagedClusters(ctx, clientDynamic)
-
-	addonMap := map[string]string{
-		case1ManagedClusterAddOnName:           case1ClusterManagementAddOnCRDefault,
-		case2ManagedClusterAddOnName:           case2ClusterManagementAddOnCRDefault,
-		"governance-standalone-hub-templating": case3ClusterManagementAddOnDefaultCR,
-		case4ManagedClusterAddOnName:           case4ClusterManagementAddOnCRDefault,
-	}
-
-	for addonName, addonCR := range addonMap {
-		By("Deploying the default " + addonName + " ClusterManagementAddon to the hub cluster")
-		Kubectl("apply", "-f", addonCR)
-	}
-
-	DeferCleanup(func() {
-		for addonName, addonCR := range addonMap {
-			By("Deleting the default " + addonName + " ClusterManagementAddon from the hub cluster")
-			Kubectl("delete", "--ignore-not-found", "-f", addonCR)
-		}
-	})
 })
 
 func getManagedClusters(ctx context.Context, client dynamic.Interface) []managedClusterConfig {
