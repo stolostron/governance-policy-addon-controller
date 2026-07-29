@@ -49,8 +49,8 @@ type UserValues struct {
 	GlobalValues                  policyaddon.GlobalValues `json:"global"`
 	KubernetesDistribution        string                   `json:"kubernetesDistribution"`
 	HostingKubernetesDistribution string                   `json:"hostingKubernetesDistribution"`
-	Prometheus                    map[string]interface{}   `json:"prometheus"`
-	OperatorPolicy                map[string]interface{}   `json:"operatorPolicy"`
+	Prometheus                    map[string]any           `json:"prometheus"`
+	OperatorPolicy                map[string]any           `json:"operatorPolicy"`
 	UserArgs                      UserArgs                 `json:"args"`
 	StandaloneHubTemplatingSecret string                   `json:"standaloneHubTemplatingSecret"`
 }
@@ -89,8 +89,8 @@ func getValues(
 					"NO_PROXY":    "",
 				},
 			},
-			Prometheus:     map[string]interface{}{},
-			OperatorPolicy: map[string]interface{}{},
+			Prometheus:     map[string]any{},
+			OperatorPolicy: map[string]any{},
 			UserArgs: UserArgs{
 				UserArgs: policyaddon.UserArgs{
 					LogEncoder:  "console",
@@ -142,8 +142,8 @@ func getValues(
 
 		if val, ok := annotations[policyaddon.PolicyLogLevelAnnotation]; ok {
 			logLevel := policyaddon.GetLogLevel(addonName, val)
-			userValues.UserArgs.UserArgs.LogLevel = logLevel
-			userValues.UserArgs.UserArgs.PkgLogLevel = logLevel - 2
+			userValues.UserArgs.LogLevel = logLevel
+			userValues.UserArgs.PkgLogLevel = logLevel - 2
 		}
 
 		if val, ok := annotations[evaluationConcurrencyAnnotation]; ok {
@@ -239,7 +239,7 @@ func mandateValues(
 }
 
 func GetAgentAddon(ctx context.Context, controllerContext *controllercmd.ControllerContext) (agent.AgentAddon, error) {
-	registrationOption := policyaddon.NewRegistrationOption(
+	registrationOption := policyaddon.NewRegistrationOption(ctx,
 		controllerContext,
 		addonName,
 		agentPermissionFiles,
