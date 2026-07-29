@@ -123,6 +123,7 @@ func main() {
 	klog.SetLogger(zapr.NewLogger(klogZap).WithName("klog"))
 
 	logs.InitLogs()
+
 	defer logs.FlushLogs()
 
 	ctrlconfig := controllercmd.NewControllerCommandConfig(ctrlName, ctrlVersion, runController, clock.RealClock{})
@@ -167,11 +168,7 @@ func runController(ctx context.Context, controllerContext *controllercmd.Control
 		}
 	}
 
-	wg.Add(1)
-
-	go func() {
-		defer wg.Done()
-
+	wg.Go(func() {
 		err = mgr.Start(ctx)
 		if err != nil {
 			log.Error(err, "problem starting manager")
@@ -180,7 +177,7 @@ func runController(ctx context.Context, controllerContext *controllercmd.Control
 
 		// mgr.Start is not blocking so wait on the context to finish
 		<-ctx.Done()
-	}()
+	})
 
 	wg.Wait()
 
