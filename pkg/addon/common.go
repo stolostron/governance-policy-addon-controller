@@ -8,21 +8,19 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/blang/semver/v4"
 	"github.com/openshift/library-go/pkg/assets"
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
 	prometheusv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
-	"open-cluster-management.io/addon-framework/pkg/addonfactory"
 	"open-cluster-management.io/addon-framework/pkg/addonmanager"
 	"open-cluster-management.io/addon-framework/pkg/agent"
 	"open-cluster-management.io/addon-framework/pkg/utils"
 	addonapiv1alpha1 "open-cluster-management.io/api/addon/v1alpha1"
-	clusterlistersv1 "open-cluster-management.io/api/client/cluster/listers/cluster/v1"
 	clusterv1 "open-cluster-management.io/api/cluster/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
@@ -30,71 +28,27 @@ import (
 var log = ctrl.Log.WithName("common")
 
 const (
-	PolicyAddonPauseAnnotation      = "policy-addon-pause"
-	PolicyLogLevelAnnotation        = "log-level"
-	EvaluationConcurrencyAnnotation = "policy-evaluation-concurrency"
-	ClientQPSAnnotation             = "client-qps"
-	ClientBurstAnnotation           = "client-burst"
-	PrometheusEnabledAnnotation     = "prometheus-metrics-enabled"
-
-	AnnotationParseErrorFmt = "Failed to verify '%s' annotation value '%s' for component %s " +
-		"(falling back to default value %v)"
+	PolicyAddonPauseAnnotation  = "policy-addon-pause"
+	PolicyLogLevelAnnotation    = "log-level"
+	PrometheusEnabledAnnotation = "prometheus-metrics-enabled"
 )
 
-// CommonValues contains common values for the addon chart.
-type CommonValues struct {
-	BaseValues `json:",inline"`
-	UserArgs   `json:",inline"`
-
-	KubernetesDistribution        string `json:"kubernetesDistribution,omitempty"`
-	HostingKubernetesDistribution string `json:"hostingKubernetesDistribution,omitempty"`
-}
-
-// UserArgs contains common controller flags for the addon chart.
-type UserArgs struct {
-	LogEncoder            string `json:"logEncoder,omitempty"`
-	LogLevel              int8   `json:"logLevel,omitempty"`
-	PkgLogLevel           int8   `json:"pkgLogLevel,omitempty"`
-	EvaluationConcurrency uint8  `json:"evaluationConcurrency,omitempty"`
-	ClientQPS             uint8  `json:"clientQPS,omitempty"` //nolint:tagliatelle
-	ClientBurst           uint8  `json:"clientBurst,omitempty"`
-}
-
-// GlobalValues contains global values for the addon chart.
 type GlobalValues struct {
-	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
-	ImagePullSecret string            `json:"imagePullSecret,omitempty"`
-	ImageOverrides  map[string]string `json:"imageOverrides,omitempty"`
-	ProxyConfig     *ProxyConfig      `json:"proxyConfig,omitempty"`
+	ImagePullPolicy string            `json:"imagePullPolicy"`
+	ImagePullSecret string            `json:"imagePullSecret"`
+	ImageOverrides  map[string]string `json:"imageOverrides"`
+	ProxyConfig     map[string]string `json:"proxyConfig"`
 }
 
-// ProxyConfig contains proxy configuration values for the addon chart.
-//
-//nolint:tagliatelle
-type ProxyConfig struct {
-	HTTPProxy  string `json:"HTTP_PROXY,omitempty"`
-	HTTPSProxy string `json:"HTTPS_PROXY,omitempty"`
-	NoProxy    string `json:"NO_PROXY,omitempty"`
+type UserArgs struct {
+	LogEncoder  string `json:"logEncoder,omitempty"`
+	LogLevel    int8   `json:"logLevel,omitempty"`
+	PkgLogLevel int8   `json:"pkgLogLevel,omitempty"`
 }
 
-// BaseValues contains base values for the addon chart.
-type BaseValues struct {
-	GlobalValues                  *GlobalValues     `json:"global,omitempty"`
-	OnMulticlusterHub             bool              `json:"onMulticlusterHub,omitempty"`
-	KubernetesDistribution        string            `json:"kubernetesDistribution,omitempty"`
-	HostingKubernetesDistribution string            `json:"hostingKubernetesDistribution,omitempty"`
-	PrometheusConfig              *PrometheusConfig `json:"prometheus,omitempty"`
-}
-
-// Prometheus contains Prometheus metrics configuration values for the addon chart.
-type PrometheusConfig struct {
-	Enabled        bool            `json:"enabled,omitempty"`
-	ServiceMonitor *ServiceMonitor `json:"serviceMonitor,omitempty"`
-}
-
-// ServiceMonitor contains Prometheus ServiceMonitor configuration values for the addon chart.
-type ServiceMonitor struct {
-	Namespace *string `json:"namespace,omitempty"`
+type UserValues struct {
+	GlobalValues GlobalValues `json:"global"`
+	UserArgs     UserArgs     `json:"args"`
 }
 
 var Scheme = runtime.NewScheme()
@@ -113,8 +67,8 @@ func init() {
 	}
 }
 
-// NewRegistrationOption creates a new registration option for the addon.
 func NewRegistrationOption(
+	ctx context.Context,
 	controllerContext *controllercmd.ControllerContext,
 	addonName string,
 	agentPermissionFiles []string,
@@ -139,7 +93,7 @@ func NewRegistrationOption(
 			Group:       groups[groupIdx],
 		}
 
-		results := resourceapply.ApplyDirectly(context.Background(),
+		results := resourceapply.ApplyDirectly(ctx,
 			resourceapply.NewKubeClientHolder(kubeclient),
 			recorder,
 			resourceapply.NewResourceCache(),
@@ -186,8 +140,6 @@ func NewRegistrationOption(
 	}
 }
 
-// GetClusterVendor determines the vendor of the cluster based on the labels
-// and cluster claims.
 func GetClusterVendor(cluster *clusterv1.ManagedCluster) string {
 	var vendor string
 	// Don't just set it to the value in the label, it might be something like "auto-detect"
@@ -206,7 +158,6 @@ func GetClusterVendor(cluster *clusterv1.ManagedCluster) string {
 	return vendor
 }
 
-// GetAndAddAgent adds the agent to the manager.
 func GetAndAddAgent(
 	ctx context.Context,
 	mgr addonmanager.AddonManager,
@@ -234,8 +185,6 @@ type PolicyAgentAddon struct {
 	agent.AgentAddon
 }
 
-// Manifests overrides the AgentAddon.Manifests method to return an error when
-// the policy addon is paused.
 func (pa *PolicyAgentAddon) Manifests(
 	cluster *clusterv1.ManagedCluster,
 	addon *addonapiv1alpha1.ManagedClusterAddOn,
@@ -249,8 +198,49 @@ func (pa *PolicyAgentAddon) Manifests(
 	return pa.AgentAddon.Manifests(cluster, addon)
 }
 
-// CommonAgentInstallNamespaceFromDeploymentConfigFunc returns a function that
-// gets the agent install namespace for the addon from the deployment config.
+// GetLogLevel verifies the user-provided log level against Zap, returning 0 if the check fails.
+func GetLogLevel(component string, level string) int8 {
+	logDefault := int8(0)
+
+	if level == "error" {
+		return int8(-1)
+	}
+
+	logLevel, err := strconv.ParseInt(level, 10, 8)
+	if err != nil || logLevel < -1 {
+		log.Error(err, fmt.Sprintf(
+			"Failed to verify '%s' annotation value '%s' for component %s (falling back to default value %d)",
+			PolicyLogLevelAnnotation, level, component, logDefault),
+		)
+
+		return logDefault
+	}
+
+	// This is safe because we specified the int8 in ParseInt
+	return int8(logLevel)
+}
+
+// IsOldKubernetes returns a boolean for whether a cluster is running an older Kubernetes that
+// doesn't support current leader election methods.
+func IsOldKubernetes(cluster *clusterv1.ManagedCluster) bool {
+	for _, cc := range cluster.Status.ClusterClaims {
+		if cc.Name == "kubeversion.open-cluster-management.io" {
+			k8sVersion, err := semver.ParseTolerant(cc.Value)
+			if err != nil {
+				continue
+			}
+
+			if k8sVersion.Major <= 1 && k8sVersion.Minor < 14 {
+				return true
+			}
+
+			return false
+		}
+	}
+
+	return false
+}
+
 func CommonAgentInstallNamespaceFromDeploymentConfigFunc(
 	adcgetter utils.AddOnDeploymentConfigGetter,
 ) func(*addonapiv1alpha1.ManagedClusterAddOn) (string, error) {
@@ -263,221 +253,22 @@ func CommonAgentInstallNamespaceFromDeploymentConfigFunc(
 
 		hostingClusterName := addon.Annotations["addon.open-cluster-management.io/hosting-cluster-name"]
 		// Check it is hosted mode
-		// the hosted mode install namespace name follows the fixed format: klusterlet-<cluster name>
-		if hostingClusterName != "" {
-			return "klusterlet-" + addon.Namespace, nil
+		//nolint:staticcheck
+		if hostingClusterName != "" && addon.Spec.InstallNamespace != "" {
+			return addon.Spec.InstallNamespace, nil
 		}
 
-		return utils.AgentInstallNamespaceFromDeploymentConfigFunc(adcgetter)(addon)
-	}
-}
+		config, err := utils.GetDesiredAddOnDeploymentConfig(addon, adcgetter)
+		if err != nil {
+			log.Error(err, "failed to get deployment config for addon "+addon.Name)
 
-// GetLogLevel verifies the user-provided log level against Zap, returning 0 if the check fails.
-func GetLogLevel(level string) (int8, error) {
-	logDefault := int8(0)
-
-	if level == "error" {
-		return int8(-1), nil
-	}
-
-	logLevel, err := strconv.ParseInt(level, 10, 8)
-	if err != nil || logLevel < -1 {
-		return logDefault, fmt.Errorf("failed to parse log level value '%s' (falling back to default value %d): %w",
-			level, logDefault, err)
-	}
-
-	// This is safe because we specified the int8 in ParseInt
-	return int8(logLevel), nil
-}
-
-// SetLogLevel sets the log level for the addon, setting the package log level
-// to 2 less than the user log level.
-func (cv *CommonValues) SetLogLevel(value string) error {
-	logLevel, err := GetLogLevel(value)
-	cv.UserArgs.LogLevel = logLevel
-	cv.UserArgs.PkgLogLevel = logLevel - 2
-
-	return err
-}
-
-// SetEvaluationConcurrency sets the evaluation concurrency for the addon.
-func (cv *CommonValues) SetEvaluationConcurrency(value string) error {
-	evaluationConcurrency, err := strconv.ParseUint(value, 10, 8)
-	if err != nil {
-		return fmt.Errorf("failed to parse evaluation concurrency value '%s' (falling back to default value %d): %w",
-			value, cv.UserArgs.EvaluationConcurrency, err)
-	}
-
-	// This is safe because we specified the uint8 in ParseUint
-	cv.UserArgs.EvaluationConcurrency = uint8(evaluationConcurrency)
-
-	return nil
-}
-
-// SetClientQPS sets the client QPS for the addon.
-func (cv *CommonValues) SetClientQPS(value string) error {
-	clientQPS, err := strconv.ParseUint(value, 10, 8)
-	if err != nil {
-		return fmt.Errorf("failed to parse client QPS value '%s' (falling back to default value %d): %w",
-			value, cv.UserArgs.ClientQPS, err)
-	}
-
-	// This is safe because we specified the uint8 in ParseUint
-	cv.UserArgs.ClientQPS = uint8(clientQPS)
-
-	return nil
-}
-
-// SetClientBurstFromEvaluationConcurrency sets the client burst for the addon
-// based on the evaluation concurrency.
-func (cv *CommonValues) SetClientBurstFromEvaluationConcurrency() {
-	if cv.UserArgs.EvaluationConcurrency != 0 && cv.UserArgs.ClientBurst == 0 {
-		cv.UserArgs.ClientBurst = cv.UserArgs.EvaluationConcurrency*22 + 1
-	}
-}
-
-// SetClientBurst sets the client burst for the addon.
-func (cv *CommonValues) SetClientBurst(value string) error {
-	clientBurst, err := strconv.ParseUint(value, 10, 8)
-	if err != nil {
-		return fmt.Errorf("failed to parse client burst value '%s' (falling back to default value %d): %w",
-			value, cv.UserArgs.ClientBurst, err)
-	}
-
-	// This is safe because we specified the uint8 in ParseUint
-	cv.UserArgs.ClientBurst = uint8(clientBurst)
-
-	return nil
-}
-
-// SetPrometheusEnabled sets the Prometheus metrics enabled boolean for the
-// addon chart, enabling metrics configurations to be deployed.
-func (cv *CommonValues) SetPrometheusEnabled(value string) error {
-	prometheusEnabled, err := strconv.ParseBool(value)
-	if err != nil {
-		return fmt.Errorf("failed to parse prometheus enabled boolean '%s' (falling back to default value %t): %w",
-			value, false, err)
-	}
-
-	cv.PrometheusConfig = &PrometheusConfig{
-		Enabled: prometheusEnabled,
-	}
-
-	return nil
-}
-
-// SetCommonValues populates settings in the common chart values for the addon
-// based on the environment. It returns an error for the respective component
-// addon handler.
-//
-// Currently the only error is a fetch error for the hosting cluster, which
-// would warrant a retry.
-func (cv *CommonValues) SetCommonValues(
-	cluster *clusterv1.ManagedCluster,
-	addon *addonapiv1alpha1.ManagedClusterAddOn,
-	clusterClient clusterlistersv1.ManagedClusterLister,
-) error {
-	var err error
-	// Set the Kubernetes distribution for the current cluster
-	cv.KubernetesDistribution = GetClusterVendor(cluster)
-
-	// Set the Kubernetes distribution for the hosting cluster
-	hostingClusterName := addon.GetAnnotations()[addonapiv1alpha1.HostingClusterNameAnnotationKey]
-	if hostingClusterName != "" {
-		hostingCluster, err := clusterClient.Get(hostingClusterName)
-		if err == nil {
-			cv.HostingKubernetesDistribution = GetClusterVendor(hostingCluster)
+			return "", err
 		}
-	} else {
-		cv.HostingKubernetesDistribution = cv.KubernetesDistribution
-	}
 
-	// Enable Prometheus metrics by default on OpenShift
-	cv.PrometheusConfig = &PrometheusConfig{
-		Enabled: cv.HostingKubernetesDistribution == "OpenShift",
-	}
-
-	return err
-}
-
-// SetCommonValuesFromCustomizedVariables sets the common values for the addon
-// chart using customized variables from the addon deployment config. It sets
-// known values and returns a map with any unknown values and an aggregated
-// error for the respective component addon handler.
-func (cv *CommonValues) SetCommonValuesFromCustomizedVariables(
-	config addonapiv1alpha1.AddOnDeploymentConfig,
-) (map[string]string, error) {
-	values := map[string]string{}
-	var aggregateErr error
-
-	//nolint:nlreturn,unparam
-	variableToFuncMap := map[string]func(string) error{
-		"logLevel":              cv.SetLogLevel,
-		"logEncoder":            func(value string) error { cv.UserArgs.LogEncoder = value; return nil },
-		"evaluationConcurrency": cv.SetEvaluationConcurrency,
-		"clientQPS":             cv.SetClientQPS,
-		"clientBurst":           cv.SetClientBurst,
-		"prometheusEnabled":     cv.SetPrometheusEnabled,
-	}
-
-	for _, variable := range config.Spec.CustomizedVariables {
-		if fn, ok := variableToFuncMap[variable.Name]; ok {
-			if err := fn(variable.Value); err != nil {
-				aggregateErr = errors.Join(aggregateErr, err)
-			}
-		} else {
-			// If the variable is unknown, add it to the returned values
-			values[variable.Name] = variable.Value
+		if config == nil {
+			return "", nil
 		}
+
+		return config.Spec.AgentInstallNamespace, nil
 	}
-
-	cv.SetClientBurstFromEvaluationConcurrency()
-
-	return values, aggregateErr
-}
-
-// SetCommonValuesFromAnnotations sets the common values for the addon chart
-// using annotations on the ManagedClusterAddOn. It returns an aggregated error
-// for the respective component addon handler.
-func (cv *CommonValues) SetCommonValuesFromAnnotations(addon *addonapiv1alpha1.ManagedClusterAddOn) error {
-	addonName := addon.Name
-	mcaoAnnotations := addon.GetAnnotations()
-	var aggregateErr error
-
-	annotationToFuncMap := map[string]func(string) error{
-		PolicyLogLevelAnnotation:        cv.SetLogLevel,
-		EvaluationConcurrencyAnnotation: cv.SetEvaluationConcurrency,
-		ClientQPSAnnotation:             cv.SetClientQPS,
-		ClientBurstAnnotation:           cv.SetClientBurst,
-		PrometheusEnabledAnnotation:     cv.SetPrometheusEnabled,
-	}
-
-	for annotation, fn := range annotationToFuncMap {
-		if val, ok := mcaoAnnotations[annotation]; ok {
-			if err := fn(val); err != nil {
-				aggregateErr = errors.Join(aggregateErr,
-					fmt.Errorf("failed to set value from annotation '%s' for addon '%s': %w",
-						annotation, addonName, err))
-			}
-		}
-	}
-
-	cv.SetClientBurstFromEvaluationConcurrency()
-
-	return nil
-}
-
-// MandateValues sets deployment variables regardless of user overrides. As a result, caution should
-// be taken when adding settings to this function.
-func MandateValues(
-	_ *clusterv1.ManagedCluster,
-	mcao *addonapiv1alpha1.ManagedClusterAddOn,
-) (addonfactory.Values, error) {
-	values := addonfactory.Values{}
-
-	if !mcao.DeletionTimestamp.IsZero() {
-		values["uninstallationAnnotation"] = "true"
-	}
-
-	return values, nil
 }

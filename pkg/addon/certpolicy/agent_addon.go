@@ -3,13 +3,12 @@ package certpolicy
 import (
 	"context"
 	"embed"
-	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
-	corev1 "k8s.io/api/core/v1"
 	"open-cluster-management.io/addon-framework/pkg/addonfactory"
 	"open-cluster-management.io/addon-framework/pkg/addonmanager"
 	"open-cluster-management.io/addon-framework/pkg/agent"
@@ -29,102 +28,116 @@ const (
 	addonName = "cert-policy-controller"
 )
 
-type certPolicyUserValues struct {
-	policyaddon.CommonValues `json:",inline"`
+var log = ctrl.Log.WithName("certpolicy")
 
-	ManagedKubeConfigSecret string `json:"managedKubeConfigSecret,omitempty"`
+type UserValues struct {
+	GlobalValues                  policyaddon.GlobalValues `json:"global"`
+	KubernetesDistribution        string                   `json:"kubernetesDistribution"`
+	HostingKubernetesDistribution string                   `json:"hostingKubernetesDistribution"`
+	Prometheus                    map[string]any           `json:"prometheus"`
+	UserArgs                      policyaddon.UserArgs     `json:"args"`
 }
 
-var (
-	// FS go:embed
-	//
-	//go:embed manifests
-	//go:embed manifests/managedclusterchart
-	//go:embed manifests/managedclusterchart/templates/_helpers.tpl
-	FS embed.FS
+// FS go:embed
+//
+//go:embed manifests
+//go:embed manifests/managedclusterchart
+//go:embed manifests/managedclusterchart/templates/_helpers.tpl
+var FS embed.FS
 
-	log = ctrl.Log.WithName("certpolicy")
-
-	agentPermissionFiles = []string{
-		// role with RBAC rules to access resources on hub
-		"manifests/hubpermissions/role.yaml",
-		// rolebinding to bind the above role to a certain user group
-		"manifests/hubpermissions/rolebinding.yaml",
-	}
-)
-
-func getSkeletonValues() certPolicyUserValues {
-	return certPolicyUserValues{
-		CommonValues: policyaddon.CommonValues{
-			BaseValues: policyaddon.BaseValues{
-				GlobalValues: &policyaddon.GlobalValues{
-					ImagePullPolicy: corev1.PullIfNotPresent,
-					ImageOverrides: map[string]string{
-						"cert_policy_controller": os.Getenv("CERT_POLICY_CONTROLLER_IMAGE"),
-					},
-				},
-			},
-		},
-	}
+var agentPermissionFiles = []string{
+	// role with RBAC rules to access resources on hub
+	"manifests/hubpermissions/role.yaml",
+	// rolebinding to bind the above role to a certain user group
+	"manifests/hubpermissions/rolebinding.yaml",
 }
 
-func getValuesFromAnnotations(
+func getValues(
 	clusterClient clusterlistersv1.ManagedClusterLister,
 ) func(*clusterv1.ManagedCluster, *addonapiv1alpha1.ManagedClusterAddOn) (addonfactory.Values, error) {
 	return func(
 		cluster *clusterv1.ManagedCluster, addon *addonapiv1alpha1.ManagedClusterAddOn,
 	) (addonfactory.Values, error) {
-		userValues := getSkeletonValues()
-
-		err := userValues.CommonValues.SetCommonValues(cluster, addon, clusterClient)
-		if err != nil {
-			return nil, err
+		userValues := UserValues{
+			GlobalValues: policyaddon.GlobalValues{
+				ImagePullPolicy: "IfNotPresent",
+				ImagePullSecret: "open-cluster-management-image-pull-credentials",
+				ImageOverrides: map[string]string{
+					"cert_policy_controller": os.Getenv("CERT_POLICY_CONTROLLER_IMAGE"),
+				},
+				ProxyConfig: map[string]string{
+					"HTTP_PROXY":  "",
+					"HTTPS_PROXY": "",
+					"NO_PROXY":    "",
+				},
+			},
+			Prometheus: map[string]any{},
+			UserArgs: policyaddon.UserArgs{
+				LogEncoder:  "console",
+				LogLevel:    0,
+				PkgLogLevel: -1,
+			},
 		}
 
-		if err := userValues.CommonValues.SetCommonValuesFromAnnotations(addon); err != nil {
-			log.Error(err, "failed to set common values from annotations")
+		userValues.KubernetesDistribution = policyaddon.GetClusterVendor(cluster)
+
+		hostingClusterName := addon.Annotations["addon.open-cluster-management.io/hosting-cluster-name"]
+		if hostingClusterName != "" {
+			hostingCluster, err := clusterClient.Get(hostingClusterName)
+			if err != nil {
+				return nil, err
+			}
+
+			userValues.HostingKubernetesDistribution = policyaddon.GetClusterVendor(hostingCluster)
+		} else {
+			userValues.HostingKubernetesDistribution = userValues.KubernetesDistribution
+		}
+
+		// Enable Prometheus metrics by default on OpenShift
+		userValues.Prometheus["enabled"] = userValues.HostingKubernetesDistribution == "OpenShift"
+
+		annotations := addon.GetAnnotations()
+
+		if val, ok := annotations[policyaddon.PrometheusEnabledAnnotation]; ok {
+			valBool, err := strconv.ParseBool(val)
+			if err != nil {
+				log.Error(err, fmt.Sprintf(
+					"Failed to verify '%s' annotation value '%s' for component %s (falling back to default value %v)",
+					policyaddon.PrometheusEnabledAnnotation, val, addonName, userValues.Prometheus["enabled"]),
+				)
+			} else {
+				userValues.Prometheus["enabled"] = valBool
+			}
+		}
+
+		if val, ok := annotations[policyaddon.PolicyLogLevelAnnotation]; ok {
+			logLevel := policyaddon.GetLogLevel(addonName, val)
+			userValues.UserArgs.LogLevel = logLevel
+			userValues.UserArgs.PkgLogLevel = logLevel - 2
 		}
 
 		return addonfactory.JsonStructToValues(userValues)
 	}
 }
 
-func getValuesFromCustomizedVariableValues(config addonapiv1alpha1.AddOnDeploymentConfig) (addonfactory.Values, error) {
-	userValues := getSkeletonValues()
+// mandateValues sets deployment variables regardless of user overrides. As a result, caution should
+// be taken when adding settings to this function.
+func mandateValues(
+	cluster *clusterv1.ManagedCluster,
+	_ *addonapiv1alpha1.ManagedClusterAddOn,
+) (addonfactory.Values, error) {
+	values := addonfactory.Values{}
 
-	userValuesMap, err := userValues.CommonValues.SetCommonValuesFromCustomizedVariables(config)
-	if err != nil {
-		log.Error(err, "error setting common addon values from customized variables")
+	// Don't allow replica overrides for older Kubernetes
+	if policyaddon.IsOldKubernetes(cluster) {
+		values["replicas"] = 1
 	}
 
-	//nolint:unparam
-	variableToFuncMap := map[string]func(string) error{
-		"managedKubeConfigSecret": func(value string) error {
-			userValues.ManagedKubeConfigSecret = value
-
-			return nil
-		},
-	}
-
-	for key, value := range userValuesMap {
-		if fn, ok := variableToFuncMap[key]; ok {
-			err := fn(value)
-			if err != nil {
-				log.Error(err, "error setting customized variable", "variable", key, "value", value)
-			}
-		} else {
-			log.Error(errors.New("unknown customized variable"),
-				"variable is not supported",
-				"variable", key,
-				"value", value)
-		}
-	}
-
-	return addonfactory.JsonStructToValues(userValues)
+	return values, nil
 }
 
 func GetAgentAddon(ctx context.Context, controllerContext *controllercmd.ControllerContext) (agent.AgentAddon, error) {
-	registrationOption := policyaddon.NewRegistrationOption(
+	registrationOption := policyaddon.NewRegistrationOption(ctx,
 		controllerContext,
 		addonName,
 		agentPermissionFiles,
@@ -148,14 +161,15 @@ func GetAgentAddon(ctx context.Context, controllerContext *controllercmd.Control
 	return addonfactory.NewAgentAddonFactory(addonName, FS, "manifests/managedclusterchart").
 		WithConfigGVRs(utils.AddOnDeploymentConfigGVR).
 		WithGetValuesFuncs(
-			getValuesFromAnnotations(clusterInformer.Lister()),
-			addonfactory.GetValuesFromAddonAnnotation,
 			addonfactory.GetAddOnDeploymentConfigValues(
-				utils.NewAddOnDeploymentConfigGetter(addonClient),
+				addonfactory.NewAddOnDeploymentConfigGetter(addonClient),
 				addonfactory.ToAddOnNodePlacementValues,
 				addonfactory.ToAddOnResourceRequirementsValues,
-				getValuesFromCustomizedVariableValues,
+				addonfactory.ToAddOnCustomizedVariableValues,
 			),
+			getValues(clusterInformer.Lister()),
+			addonfactory.GetValuesFromAddonAnnotation,
+			mandateValues,
 		).
 		WithManagedClusterClient(clusterClient).
 		WithAgentRegistrationOption(registrationOption).
