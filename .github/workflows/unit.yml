@@ -46,7 +46,7 @@ jobs:
         github.event_name == 'push' &&
         github.repository_owner == 'stolostron'  &&
         matrix.kind == 'latest'
-      uses: sonarsource/sonarcloud-github-action@master
+      uses: sonarsource/sonarcloud-github-action@ba3875ecf642b2129de2b589510c81a8b53dbf4e # master
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
