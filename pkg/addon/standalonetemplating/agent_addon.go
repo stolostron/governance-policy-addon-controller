@@ -48,8 +48,8 @@ func getValues(
 	return values, nil
 }
 
-func getAgentAddon(controllerContext *controllercmd.ControllerContext) (agent.AgentAddon, error) {
-	registrationOption := policyaddon.NewRegistrationOption(
+func getAgentAddon(ctx context.Context, controllerContext *controllercmd.ControllerContext) (agent.AgentAddon, error) {
+	registrationOption := policyaddon.NewRegistrationOption(ctx,
 		controllerContext,
 		addonName,
 		agentPermissionFiles,
@@ -70,7 +70,7 @@ func getAgentAddon(controllerContext *controllercmd.ControllerContext) (agent.Ag
 		WithConfigGVRs(utils.AddOnDeploymentConfigGVR).
 		WithGetValuesFuncs(
 			addonfactory.GetAddOnDeploymentConfigValues(
-				utils.NewAddOnDeploymentConfigGetter(addonClient),
+				addonfactory.NewAddOnDeploymentConfigGetter(addonClient),
 				addonfactory.ToAddOnNodePlacementValues,
 				addonfactory.ToAddOnCustomizedVariableValues,
 			),
@@ -101,9 +101,9 @@ func (sa *StandaloneAgentAddon) Manifests(
 }
 
 func GetAndAddAgent(
-	_ context.Context, mgr addonmanager.AddonManager, controllerContext *controllercmd.ControllerContext,
+	ctx context.Context, mgr addonmanager.AddonManager, controllerContext *controllercmd.ControllerContext,
 ) error {
-	agentAddon, err := getAgentAddon(controllerContext)
+	agentAddon, err := getAgentAddon(ctx, controllerContext)
 	if err != nil {
 		return fmt.Errorf("failed getting the %v agent addon: %w", addonName, err)
 	}

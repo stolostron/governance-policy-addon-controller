@@ -3,15 +3,13 @@ package configpolicy
 import (
 	"context"
 	"embed"
-	"errors"
 	"fmt"
 	"os"
 	"strconv"
 	"time"
 
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
-	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"open-cluster-management.io/addon-framework/pkg/addonfactory"
 	"open-cluster-management.io/addon-framework/pkg/addonmanager"
 	"open-cluster-management.io/addon-framework/pkg/agent"
@@ -31,87 +29,97 @@ import (
 
 const (
 	addonName                        = "config-policy-controller"
+	evaluationConcurrencyAnnotation  = "policy-evaluation-concurrency"
+	clientQPSAnnotation              = "client-qps"
+	clientBurstAnnotation            = "client-burst"
 	operatorPolicyDisabledAnnotation = "operator-policy-disabled"
 	standaloneTemplatingAddonName    = "governance-standalone-hub-templating"
 )
 
-type configPolicyUserValues struct {
-	policyaddon.CommonValues `json:",inline"`
+var log = ctrl.Log.WithName("configpolicy")
 
-	ManagedKubeConfigSecret       string          `json:"managedKubeConfigSecret,omitempty"`
-	OperatorPolicy                *operatorPolicy `json:"operatorPolicy,omitempty"`
-	StandaloneHubTemplatingSecret string          `json:"standaloneHubTemplatingSecret,omitempty"`
+type UserArgs struct {
+	policyaddon.UserArgs
+	EvaluationConcurrency uint8 `json:"evaluationConcurrency,omitempty"`
+	ClientQPS             uint8 `json:"clientQPS,omitempty"` //nolint:tagliatelle
+	ClientBurst           uint8 `json:"clientBurst,omitempty"`
 }
 
-type operatorPolicy struct {
-	Disabled         bool   `json:"disabled"`
-	DefaultNamespace string `json:"defaultNamespace,omitempty"`
+type UserValues struct {
+	GlobalValues                  policyaddon.GlobalValues `json:"global"`
+	KubernetesDistribution        string                   `json:"kubernetesDistribution"`
+	HostingKubernetesDistribution string                   `json:"hostingKubernetesDistribution"`
+	Prometheus                    map[string]any           `json:"prometheus"`
+	OperatorPolicy                map[string]any           `json:"operatorPolicy"`
+	UserArgs                      UserArgs                 `json:"args"`
+	StandaloneHubTemplatingSecret string                   `json:"standaloneHubTemplatingSecret"`
 }
 
-var (
-	// FS go:embed
-	//
-	//go:embed manifests
-	//go:embed manifests/managedclusterchart
-	//go:embed manifests/managedclusterchart/templates/_helpers.tpl
-	FS embed.FS
+// FS go:embed
+//
+//go:embed manifests
+//go:embed manifests/managedclusterchart
+//go:embed manifests/managedclusterchart/templates/_helpers.tpl
+var FS embed.FS
 
-	log = ctrl.Log.WithName("configpolicy")
-
-	agentPermissionFiles = []string{
-		// role with RBAC rules to access resources on hub
-		"manifests/hubpermissions/role.yaml",
-		// rolebinding to bind the above role to a certain user group
-		"manifests/hubpermissions/rolebinding.yaml",
-	}
-)
-
-func getSkeletonValues() configPolicyUserValues {
-	return configPolicyUserValues{
-		CommonValues: policyaddon.CommonValues{
-			BaseValues: policyaddon.BaseValues{
-				GlobalValues: &policyaddon.GlobalValues{
-					ImagePullPolicy: corev1.PullIfNotPresent,
-					ImageOverrides: map[string]string{
-						"config_policy_controller": os.Getenv("CONFIG_POLICY_CONTROLLER_IMAGE"),
-					},
-				},
-			},
-		},
-		OperatorPolicy: &operatorPolicy{
-			Disabled: false,
-		},
-	}
+var agentPermissionFiles = []string{
+	// role with RBAC rules to access resources on hub
+	"manifests/hubpermissions/role.yaml",
+	// rolebinding to bind the above role to a certain user group
+	"manifests/hubpermissions/rolebinding.yaml",
 }
 
-func (cpv *configPolicyUserValues) setOperatorPolicyDisabled(value string) error {
-	valBool, err := strconv.ParseBool(value)
-	if err != nil {
-		return err
-	}
-
-	cpv.OperatorPolicy.Disabled = valBool
-
-	return nil
-}
-
-func getValuesFromAnnotations(
+func getValues(
 	clusterClient clusterlistersv1.ManagedClusterLister,
 	addonClient addonlistersv1alpha1.ManagedClusterAddOnLister,
 ) func(*clusterv1.ManagedCluster, *addonapiv1alpha1.ManagedClusterAddOn) (addonfactory.Values, error) {
 	return func(
 		cluster *clusterv1.ManagedCluster, addon *addonapiv1alpha1.ManagedClusterAddOn,
 	) (addonfactory.Values, error) {
-		userValues := getSkeletonValues()
-
-		err := userValues.CommonValues.SetCommonValues(cluster, addon, clusterClient)
-		if err != nil {
-			return nil, err
+		userValues := UserValues{
+			GlobalValues: policyaddon.GlobalValues{
+				ImagePullPolicy: "IfNotPresent",
+				ImagePullSecret: "open-cluster-management-image-pull-credentials",
+				ImageOverrides: map[string]string{
+					"config_policy_controller": os.Getenv("CONFIG_POLICY_CONTROLLER_IMAGE"),
+				},
+				ProxyConfig: map[string]string{
+					"HTTP_PROXY":  "",
+					"HTTPS_PROXY": "",
+					"NO_PROXY":    "",
+				},
+			},
+			Prometheus:     map[string]any{},
+			OperatorPolicy: map[string]any{},
+			UserArgs: UserArgs{
+				UserArgs: policyaddon.UserArgs{
+					LogEncoder:  "console",
+					LogLevel:    0,
+					PkgLogLevel: -1,
+				},
+				// Defaults from `values.yaml` will be used if these stay at 0.
+				EvaluationConcurrency: 0,
+				ClientQPS:             0, // will be set based on concurrency if not explicitly set
+				ClientBurst:           0, // will be set based on concurrency if not explicitly set
+			},
 		}
 
-		// Set the standalone hub templating secret if enabled
-		_, err = addonClient.ManagedClusterAddOns(addon.Namespace).Get(standaloneTemplatingAddonName)
-		if !k8serrors.IsNotFound(err) {
+		userValues.KubernetesDistribution = policyaddon.GetClusterVendor(cluster)
+
+		hostingClusterName := addon.Annotations["addon.open-cluster-management.io/hosting-cluster-name"]
+		if hostingClusterName != "" {
+			hostingCluster, err := clusterClient.Get(hostingClusterName)
+			if err != nil {
+				return nil, err
+			}
+
+			userValues.HostingKubernetesDistribution = policyaddon.GetClusterVendor(hostingCluster)
+		} else {
+			userValues.HostingKubernetesDistribution = userValues.KubernetesDistribution
+		}
+
+		_, err := addonClient.ManagedClusterAddOns(addon.Namespace).Get(standaloneTemplatingAddonName)
+		if !errors.IsNotFound(err) {
 			if err != nil {
 				return nil, err
 			}
@@ -119,24 +127,90 @@ func getValuesFromAnnotations(
 			userValues.StandaloneHubTemplatingSecret = standaloneTemplatingAddonName + "-hub-kubeconfig"
 		}
 
-		// Configure OperatorPolicy based on the cluster's OpenShift version
+		// Enable Prometheus metrics by default on OpenShift
+		userValues.Prometheus["enabled"] = userValues.HostingKubernetesDistribution == "OpenShift"
+
+		// Disable OperatorPolicy if the cluster is not on OpenShift version 4.y
+		userValues.OperatorPolicy["disabled"] = cluster.Labels["openshiftVersion-major"] != "4"
+
+		// Set the default namespace for OperatorPolicy for OpenShift 4
 		if cluster.Labels["openshiftVersion-major"] == "4" {
-			userValues.OperatorPolicy.DefaultNamespace = "openshift-operators"
-		} else {
-			userValues.OperatorPolicy.Disabled = true
+			userValues.OperatorPolicy["defaultNamespace"] = "openshift-operators"
 		}
 
-		if err := userValues.CommonValues.SetCommonValuesFromAnnotations(addon); err != nil {
-			log.Error(err, "failed to set common values from annotations")
+		annotations := addon.GetAnnotations()
+
+		if val, ok := annotations[policyaddon.PolicyLogLevelAnnotation]; ok {
+			logLevel := policyaddon.GetLogLevel(addonName, val)
+			userValues.UserArgs.LogLevel = logLevel
+			userValues.UserArgs.PkgLogLevel = logLevel - 2
 		}
 
-		if val, ok := addon.GetAnnotations()[operatorPolicyDisabledAnnotation]; ok {
-			err := userValues.setOperatorPolicyDisabled(val)
+		if val, ok := annotations[evaluationConcurrencyAnnotation]; ok {
+			value, err := strconv.ParseUint(val, 10, 8)
 			if err != nil {
 				log.Error(err, fmt.Sprintf(
-					policyaddon.AnnotationParseErrorFmt,
-					operatorPolicyDisabledAnnotation, val, addonName, false),
+					"Failed to verify '%s' annotation value '%s' for component %s (falling back to default value %d)",
+					evaluationConcurrencyAnnotation, val, addonName, userValues.UserArgs.EvaluationConcurrency),
 				)
+			} else {
+				// This is safe because we specified the uint8 in ParseUint
+				userValues.UserArgs.EvaluationConcurrency = uint8(value)
+			}
+		}
+
+		if val, ok := annotations[clientQPSAnnotation]; ok {
+			value, err := strconv.ParseUint(val, 10, 8)
+			if err != nil {
+				log.Error(err, fmt.Sprintf(
+					"Failed to verify '%s' annotation value '%s' for component %s (falling back to default value %d)",
+					clientQPSAnnotation, val, addonName, userValues.UserArgs.ClientQPS),
+				)
+			} else {
+				// This is safe because we specified the uint8 in ParseUint
+				userValues.UserArgs.ClientQPS = uint8(value)
+			}
+		} else { // not set explicitly
+			userValues.UserArgs.ClientQPS = userValues.UserArgs.EvaluationConcurrency * 15
+		}
+
+		if val, ok := annotations[clientBurstAnnotation]; ok {
+			value, err := strconv.ParseUint(val, 10, 8)
+			if err != nil {
+				log.Error(err, fmt.Sprintf(
+					"Failed to verify '%s' annotation value '%s' for component %s (falling back to default value %d)",
+					clientBurstAnnotation, val, addonName, userValues.UserArgs.ClientBurst),
+				)
+			} else {
+				// This is safe because we specified the uint8 in ParseUint
+				userValues.UserArgs.ClientBurst = uint8(value)
+			}
+		} else if userValues.UserArgs.EvaluationConcurrency != 0 {
+			// only scale with concurrency if concurrency was set.
+			userValues.UserArgs.ClientBurst = userValues.UserArgs.EvaluationConcurrency*22 + 1
+		}
+
+		if val, ok := annotations[policyaddon.PrometheusEnabledAnnotation]; ok {
+			valBool, err := strconv.ParseBool(val)
+			if err != nil {
+				log.Error(err, fmt.Sprintf(
+					"Failed to verify '%s' annotation value '%s' for component %s (falling back to default value %v)",
+					policyaddon.PrometheusEnabledAnnotation, val, addonName, userValues.Prometheus["enabled"]),
+				)
+			} else {
+				userValues.Prometheus["enabled"] = valBool
+			}
+		}
+
+		if val, ok := annotations[operatorPolicyDisabledAnnotation]; ok {
+			valBool, err := strconv.ParseBool(val)
+			if err != nil {
+				log.Error(err, fmt.Sprintf(
+					"Failed to verify '%s' annotation value '%s' for component %s (falling back to default value %v)",
+					operatorPolicyDisabledAnnotation, val, addonName, userValues.OperatorPolicy["disabled"]),
+				)
+			} else {
+				userValues.OperatorPolicy["disabled"] = valBool
 			}
 		}
 
@@ -144,43 +218,28 @@ func getValuesFromAnnotations(
 	}
 }
 
-func getValuesFromCustomizedVariableValues(config addonapiv1alpha1.AddOnDeploymentConfig) (addonfactory.Values, error) {
-	userValues := getSkeletonValues()
+// mandateValues sets deployment variables regardless of user overrides. As a result, caution should
+// be taken when adding settings to this function.
+func mandateValues(
+	cluster *clusterv1.ManagedCluster,
+	mcao *addonapiv1alpha1.ManagedClusterAddOn,
+) (addonfactory.Values, error) {
+	values := addonfactory.Values{}
 
-	userValuesMap, err := userValues.CommonValues.SetCommonValuesFromCustomizedVariables(config)
-	if err != nil {
-		log.Error(err, "error setting common addon values from customized variables")
+	// Don't allow replica overrides for older Kubernetes
+	if policyaddon.IsOldKubernetes(cluster) {
+		values["replicas"] = 1
 	}
 
-	//nolint:unparam
-	variableToFuncMap := map[string]func(string) error{
-		"operatorPolicyDisabled": userValues.setOperatorPolicyDisabled,
-		"managedKubeConfigSecret": func(value string) error {
-			userValues.ManagedKubeConfigSecret = value
-
-			return nil
-		},
+	if !mcao.DeletionTimestamp.IsZero() {
+		values["uninstallationAnnotation"] = "true"
 	}
 
-	for key, value := range userValuesMap {
-		if fn, ok := variableToFuncMap[key]; ok {
-			err := fn(value)
-			if err != nil {
-				log.Error(err, "error setting customized variable", "variable", key, "value", value)
-			}
-		} else {
-			log.Error(errors.New("unknown customized variable"),
-				"variable is not supported",
-				"variable", key,
-				"value", value)
-		}
-	}
-
-	return addonfactory.JsonStructToValues(userValues)
+	return values, nil
 }
 
 func GetAgentAddon(ctx context.Context, controllerContext *controllercmd.ControllerContext) (agent.AgentAddon, error) {
-	registrationOption := policyaddon.NewRegistrationOption(
+	registrationOption := policyaddon.NewRegistrationOption(ctx,
 		controllerContext,
 		addonName,
 		agentPermissionFiles,
@@ -208,15 +267,15 @@ func GetAgentAddon(ctx context.Context, controllerContext *controllercmd.Control
 	return addonfactory.NewAgentAddonFactory(addonName, FS, "manifests/managedclusterchart").
 		WithConfigGVRs(utils.AddOnDeploymentConfigGVR).
 		WithGetValuesFuncs(
-			getValuesFromAnnotations(clusterInformer.Lister(), addonInformer.Lister()),
-			addonfactory.GetValuesFromAddonAnnotation,
 			addonfactory.GetAddOnDeploymentConfigValues(
-				utils.NewAddOnDeploymentConfigGetter(addonClient),
+				addonfactory.NewAddOnDeploymentConfigGetter(addonClient),
 				addonfactory.ToAddOnNodePlacementValues,
 				addonfactory.ToAddOnResourceRequirementsValues,
-				getValuesFromCustomizedVariableValues,
+				addonfactory.ToAddOnCustomizedVariableValues,
 			),
-			policyaddon.MandateValues,
+			getValues(clusterInformer.Lister(), addonInformer.Lister()),
+			addonfactory.GetValuesFromAddonAnnotation,
+			mandateValues,
 		).
 		WithManagedClusterClient(clusterClient).
 		WithAgentRegistrationOption(registrationOption).
