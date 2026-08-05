@@ -34,7 +34,7 @@ type UserValues struct {
 	GlobalValues                  policyaddon.GlobalValues `json:"global"`
 	KubernetesDistribution        string                   `json:"kubernetesDistribution"`
 	HostingKubernetesDistribution string                   `json:"hostingKubernetesDistribution"`
-	Prometheus                    map[string]interface{}   `json:"prometheus"`
+	Prometheus                    map[string]any           `json:"prometheus"`
 	UserArgs                      policyaddon.UserArgs     `json:"args"`
 }
 
@@ -71,7 +71,7 @@ func getValues(
 					"NO_PROXY":    "",
 				},
 			},
-			Prometheus: map[string]interface{}{},
+			Prometheus: map[string]any{},
 			UserArgs: policyaddon.UserArgs{
 				LogEncoder:  "console",
 				LogLevel:    0,
@@ -137,7 +137,7 @@ func mandateValues(
 }
 
 func GetAgentAddon(ctx context.Context, controllerContext *controllercmd.ControllerContext) (agent.AgentAddon, error) {
-	registrationOption := policyaddon.NewRegistrationOption(
+	registrationOption := policyaddon.NewRegistrationOption(ctx,
 		controllerContext,
 		addonName,
 		agentPermissionFiles,
