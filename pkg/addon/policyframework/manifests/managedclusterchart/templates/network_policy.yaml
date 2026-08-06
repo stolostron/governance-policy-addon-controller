@@ -1,0 +1,70 @@
+{{- if .Values.global.networkPolicies.enabled }}
+---
+# Copyright Contributors to the Open Cluster Management project
+
+# NetworkPolicy for governance-policy-framework-addon
+#
+# Ingress:
+#  - Metrics from monitoring namespace
+#
+# Egress:
+#  - DNS queries to openshift-dns (ports 53, 5353)
+#  - Kubernetes API calls (ports 443, 6443)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: governance-policy-framework-addon
+  namespace: open-cluster-management-agent-addon
+  labels:
+    app: governance-policy-framework-addon
+    app.kubernetes.io/name: governance-policy-framework-addon
+spec:
+  podSelector:
+    matchLabels:
+      app: governance-policy-framework-addon
+  policyTypes:
+  - Ingress
+  - Egress
+  # Ingress rules
+  ingress:
+  # Metrics collection from monitoring stack on port 8443 (secure metrics on OpenShift)
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          network.openshift.io/policy-group: monitoring
+    ports:
+    - protocol: TCP
+      port: 8443
+  {{- else if .Values.prometheus.enabled }}
+  # Metrics collection from monitoring stack on port 8383
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          network.openshift.io/policy-group: monitoring
+    ports:
+    - protocol: TCP
+      port: 8383
+  {{- end }}
+  # Egress rules
+  egress:
+  # DNS queries for hostname resolution
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: openshift-dns
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 5353
+    - protocol: TCP
+      port: 5353
+  # Kubernetes API access
+  - ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 6443
+{{- end }}
