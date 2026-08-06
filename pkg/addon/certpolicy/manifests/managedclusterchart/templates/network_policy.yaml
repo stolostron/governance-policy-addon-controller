@@ -1,0 +1,72 @@
+{{- if .Values.global.networkPolicies.enabled }}
+# Copyright Contributors to the Open Cluster Management project
+
+# NetworkPolicy for cert-policy-controller
+#
+# Ingress:
+#   - Metrics from monitoring namespace (port 8383)
+# Egress:
+#   - DNS resolution (port 53, 5353)
+#   - Kubernetes API access (port 443, 6443)
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: cert-policy-controller-network-policy
+  labels:
+    app: cert-policy-controller
+    app.kubernetes.io/name: cert-policy-controller
+spec:
+  podSelector:
+    matchLabels:
+      app: cert-policy-controller
+  policyTypes:
+    - Ingress
+    - Egress
+
+  # Ingress Rules
+  ingress:
+  {{- if and .Values.prometheus.enabled (eq .Values.hostingKubernetesDistribution "OpenShift") }}
+  # Metrics ingress from monitoring namespace on port 8443 (secure metrics on OpenShift)
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          network.openshift.io/policy-group: monitoring
+    ports:
+    - protocol: TCP
+      port: 8443
+  {{- else if .Values.prometheus.enabled }}
+  # Metrics ingress from monitoring namespace on port 8383
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          network.openshift.io/policy-group: monitoring
+    ports:
+    - protocol: TCP
+      port: 8383
+  {{- end }}
+
+  # Egress Rules
+  egress:
+    # DNS resolution
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 5353
+        - protocol: TCP
+          port: 5353
+
+    # Kubernetes API server access
+    - ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 6443
+{{- end }}
