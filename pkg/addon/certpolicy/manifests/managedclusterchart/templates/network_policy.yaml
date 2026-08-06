@@ -1,0 +1,53 @@
+# Copyright Contributors to the Open Cluster Management project
+
+# NetworkPolicy for cert-policy-controller
+
+{{- if and .Values.global.networkPolicies.enabled .Values.networkPolicies }}
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: cert-policy-controller-network-policy
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ include "controller.fullname" . }}
+    chart: {{ include "controller.chart" . }}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ include "controller.fullname" . }}
+  policyTypes:
+    - Ingress
+    - Egress
+
+  # Ingress Rules
+  ingress:
+  # Metrics ingress from monitoring namespace on port 8443 (secure metrics on OpenShift)
+  {{- if and .Values.prometheus.enabled (eq .Values.hostingKubernetesDistribution "OpenShift") }}
+  - ports:
+    - protocol: TCP
+      port: 8443
+  {{- else if .Values.prometheus.enabled }}
+  # Metrics ingress from monitoring namespace on port 8383
+  - ports:
+    - protocol: TCP
+      port: 8383
+  {{- end }}
+  egress:
+    # DNS resolution
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 5353
+        - protocol: TCP
+          port: 5353
+    # Kubernetes API server access
+    - ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 6443
+{{- end }}

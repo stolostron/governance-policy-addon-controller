@@ -62,6 +62,9 @@ func getSkeletonValues() certPolicyUserValues {
 					ImageOverrides: map[string]string{
 						"cert_policy_controller": os.Getenv("CERT_POLICY_CONTROLLER_IMAGE"),
 					},
+					NetworkPolicies: &policyaddon.NetworkPolicies{
+						Enabled: policyaddon.GetNetworkPoliciesEnabled(),
+					},
 				},
 			},
 		},

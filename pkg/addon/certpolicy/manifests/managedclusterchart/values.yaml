@@ -15,6 +15,8 @@ logEncoder: console
 
 hubKubeConfigSecret: cert-policy-controller-hub-kubeconfig
 
+networkPolicies: true
+
 affinity: {}
 
 tolerations:
