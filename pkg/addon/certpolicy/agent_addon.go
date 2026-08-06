@@ -62,6 +62,9 @@ func getSkeletonValues() certPolicyUserValues {
 					ImageOverrides: map[string]string{
 						"cert_policy_controller": os.Getenv("CERT_POLICY_CONTROLLER_IMAGE"),
 					},
+					NetworkPolicies: &policyaddon.NetworkPolicies{
+						Enabled: policyaddon.GetNetworkPoliciesEnabled(),
+					},
 				},
 			},
 		},
@@ -76,12 +79,12 @@ func getValuesFromAnnotations(
 	) (addonfactory.Values, error) {
 		userValues := getSkeletonValues()
 
-		err := userValues.CommonValues.SetCommonValues(cluster, addon, clusterClient)
+		err := userValues.SetCommonValues(cluster, addon, clusterClient)
 		if err != nil {
 			return nil, err
 		}
 
-		if err := userValues.CommonValues.SetCommonValuesFromAnnotations(addon); err != nil {
+		if err := userValues.SetCommonValuesFromAnnotations(addon); err != nil {
 			log.Error(err, "failed to set common values from annotations")
 		}
 
@@ -92,7 +95,7 @@ func getValuesFromAnnotations(
 func getValuesFromCustomizedVariableValues(config addonapiv1beta1.AddOnDeploymentConfig) (addonfactory.Values, error) {
 	userValues := getSkeletonValues()
 
-	userValuesMap, err := userValues.CommonValues.SetCommonValuesFromCustomizedVariables(config)
+	userValuesMap, err := userValues.SetCommonValuesFromCustomizedVariables(config)
 	if err != nil {
 		log.Error(err, "error setting common addon values from customized variables")
 	}
