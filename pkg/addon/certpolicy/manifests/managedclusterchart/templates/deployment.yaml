@@ -57,6 +57,12 @@ spec:
         {{- if eq .Values.installMode "Hosted" }}
         - --target-kubeconfig-path=/var/run/managed-kubeconfig/kubeconfig
         {{- end }}
+        {{- if ne .Values.tlsMinVersion "" }}
+        - --tls-min-version={{ .Values.tlsMinVersion }}
+        {{- end }}
+        {{- if ne .Values.tlsCipherSuites "" }}
+        - --tls-cipher-suites={{ .Values.tlsCipherSuites }}
+        {{- end }}
         env:
         - name: WATCH_NAMESPACE
           {{- if eq .Values.installMode "Hosted" }}

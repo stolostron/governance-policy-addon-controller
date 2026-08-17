@@ -17,6 +17,9 @@ hubKubeConfigSecret: cert-policy-controller-hub-kubeconfig
 
 networkPolicies: true
 
+tlsMinVersion: ""
+tlsCipherSuites: ""
+
 affinity: {}
 
 tolerations:
