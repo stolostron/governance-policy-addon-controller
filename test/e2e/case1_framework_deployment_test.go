@@ -466,6 +466,9 @@ var _ = Describe("Test framework deployment", Ordered, func() {
 		checkContainersAndAvailability(ctx, cluster, 0)
 
 		checkArgs(ctx, cluster, "--disable-spec-sync=true")
+		// Note: the other setting in the annotation (the imageOverride) would
+		// prevent the pod from running, so `checkContainersAndAvailability`
+		// confirms it was successfully ignored.
 
 		// Adding this annotation and later verifying the cluster namespace is not removed checks
 		// that the helm values annotation and the logging level annotation are stackable.
