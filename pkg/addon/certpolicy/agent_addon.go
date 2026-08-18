@@ -59,9 +59,6 @@ func getSkeletonValues() certPolicyUserValues {
 			BaseValues: policyaddon.BaseValues{
 				GlobalValues: &policyaddon.GlobalValues{
 					ImagePullPolicy: corev1.PullIfNotPresent,
-					ImageOverrides: map[string]string{
-						"cert_policy_controller": os.Getenv("CERT_POLICY_CONTROLLER_IMAGE"),
-					},
 				},
 			},
 		},
@@ -156,6 +153,7 @@ func GetAgentAddon(ctx context.Context, controllerContext *controllercmd.Control
 				addonfactory.ToAddOnResourceRequirementsValues,
 				getValuesFromCustomizedVariableValues,
 			),
+			mandateImageFromEnv,
 		).
 		WithManagedClusterClient(clusterClient).
 		WithAgentRegistrationOption(registrationOption).
@@ -172,4 +170,26 @@ func GetAndAddAgent(
 	ctx context.Context, mgr addonmanager.AddonManager, controllerContext *controllercmd.ControllerContext,
 ) error {
 	return policyaddon.GetAndAddAgent(ctx, mgr, addonName, controllerContext, GetAgentAddon)
+}
+
+// mandateImageFromEnv ensures that if the environment variable for the image is
+// set to a non-empty value, that value is used in the chart.
+func mandateImageFromEnv(
+	_ *clusterv1.ManagedCluster,
+	_ *addonapiv1alpha1.ManagedClusterAddOn,
+) (addonfactory.Values, error) {
+	values := addonfactory.Values{}
+
+	img := os.Getenv("CERT_POLICY_CONTROLLER_IMAGE")
+	if img == "" {
+		return values, nil
+	}
+
+	values["global"] = map[string]any{
+		"imageOverrides": map[string]any{
+			"cert_policy_controller": img,
+		},
+	}
+
+	return values, nil
 }
