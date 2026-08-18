@@ -77,10 +77,6 @@ func getValues(cluster *clusterv1.ManagedCluster,
 		GlobalValues: policyaddon.GlobalValues{
 			ImagePullPolicy: "IfNotPresent",
 			ImagePullSecret: "open-cluster-management-image-pull-credentials",
-			ImageOverrides: map[string]string{
-				"governance_policy_framework_addon": os.Getenv("GOVERNANCE_POLICY_FRAMEWORK_ADDON_IMAGE"),
-				"kube_rbac_proxy":                   os.Getenv("KUBE_RBAC_PROXY_IMAGE"),
-			},
 			ProxyConfig: map[string]string{
 				"HTTP_PROXY":  "",
 				"HTTPS_PROXY": "",
@@ -257,6 +253,7 @@ func GetAgentAddon(ctx context.Context, controllerContext *controllercmd.Control
 			getValues,
 			addonfactory.GetValuesFromAddonAnnotation,
 			mandateValues,
+			mandateImageFromEnv,
 		).
 		WithManagedClusterClient(clusterClient).
 		WithAgentRegistrationOption(registrationOption).
@@ -273,4 +270,36 @@ func GetAndAddAgent(
 	ctx context.Context, mgr addonmanager.AddonManager, controllerContext *controllercmd.ControllerContext,
 ) error {
 	return policyaddon.GetAndAddAgent(ctx, mgr, addonName, controllerContext, GetAgentAddon)
+}
+
+// mandateImageFromEnv ensures that if the environment variable for an image is
+// set to a non-empty value, that value is used in the chart.
+func mandateImageFromEnv(
+	_ *clusterv1.ManagedCluster,
+	_ *addonapiv1alpha1.ManagedClusterAddOn,
+) (addonfactory.Values, error) {
+	values := addonfactory.Values{}
+
+	fwAddonImg := os.Getenv("GOVERNANCE_POLICY_FRAMEWORK_ADDON_IMAGE")
+	rbacImg := os.Getenv("KUBE_RBAC_PROXY_IMAGE")
+
+	if fwAddonImg == "" && rbacImg == "" {
+		return values, nil
+	}
+
+	overrides := make(map[string]any)
+
+	if fwAddonImg != "" {
+		overrides["governance_policy_framework_addon"] = fwAddonImg
+	}
+
+	if rbacImg != "" {
+		overrides["kube_rbac_proxy"] = rbacImg
+	}
+
+	values["global"] = map[string]any{
+		"imageOverrides": overrides,
+	}
+
+	return values, nil
 }
