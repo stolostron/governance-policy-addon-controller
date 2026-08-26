@@ -318,7 +318,7 @@ spec:
                             type: object
                         type: object
                       properties:
-                        description: ObjectProperties are additional properties of the related object relevant to the configuration policy.
+                        description: Properties are additional properties of the related object relevant to the configuration policy.
                         properties:
                           createdByPolicy:
                             description: >-
