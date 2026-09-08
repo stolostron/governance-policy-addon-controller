@@ -59,9 +59,6 @@ func getSkeletonValues() certPolicyUserValues {
 			BaseValues: policyaddon.BaseValues{
 				GlobalValues: &policyaddon.GlobalValues{
 					ImagePullPolicy: corev1.PullIfNotPresent,
-					ImageOverrides: map[string]string{
-						"cert_policy_controller": os.Getenv("CERT_POLICY_CONTROLLER_IMAGE"),
-					},
 					NetworkPolicies: &policyaddon.NetworkPolicies{
 						Enabled: policyaddon.GetNetworkPoliciesEnabled(),
 					},
@@ -149,24 +146,32 @@ func GetAgentAddon(ctx context.Context, controllerContext *controllercmd.Control
 		Cluster().V1().ManagedClusters()
 	go clusterInformer.Informer().Run(ctx.Done())
 
+	aodcGetter := utils.NewAddOnDeploymentConfigGetter(addonClient)
+
+	valueFuncs := []addonfactory.GetValuesFunc{
+		getValuesFromAnnotations(clusterInformer.Lister()),
+		addonfactory.GetValuesFromAddonAnnotation,
+		addonfactory.GetAddOnDeploymentConfigValues(
+			aodcGetter,
+			addonfactory.ToAddOnNodePlacementValues,
+			addonfactory.ToAddOnResourceRequirementsValues,
+			getValuesFromCustomizedVariableValues,
+		),
+		policyaddon.MandateValues,
+	}
+
+	imgFromEnv := os.Getenv("CERT_POLICY_CONTROLLER_IMAGE")
+	if imgFromEnv != "" {
+		valueFuncs = append(valueFuncs, addonfactory.GetAgentImageValues(aodcGetter,
+			"global.imageOverrides.cert_policy_controller", imgFromEnv))
+	}
+
 	return addonfactory.NewAgentAddonFactory(addonName, FS, "manifests/managedclusterchart").
 		WithConfigGVRs(utils.AddOnDeploymentConfigGVR).
-		WithGetValuesFuncs(
-			getValuesFromAnnotations(clusterInformer.Lister()),
-			addonfactory.GetValuesFromAddonAnnotation,
-			addonfactory.GetAddOnDeploymentConfigValues(
-				utils.NewAddOnDeploymentConfigGetter(addonClient),
-				addonfactory.ToAddOnNodePlacementValues,
-				addonfactory.ToAddOnResourceRequirementsValues,
-				getValuesFromCustomizedVariableValues,
-			),
-		).
+		WithGetValuesFuncs(valueFuncs...).
 		WithManagedClusterClient(clusterClient).
 		WithAgentRegistrationOption(registrationOption).
-		WithAgentInstallNamespace(
-			policyaddon.
-				CommonAgentInstallNamespaceFromDeploymentConfigFunc(utils.NewAddOnDeploymentConfigGetter(addonClient)),
-		).
+		WithAgentInstallNamespace(policyaddon.CommonAgentInstallNamespaceFromDeploymentConfigFunc(aodcGetter)).
 		WithScheme(policyaddon.Scheme).
 		WithAgentHostedModeEnabledOption().
 		BuildHelmAgentAddon()
