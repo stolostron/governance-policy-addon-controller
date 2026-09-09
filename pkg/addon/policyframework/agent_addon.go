@@ -242,25 +242,31 @@ func GetAgentAddon(ctx context.Context, controllerContext *controllercmd.Control
 		return nil, fmt.Errorf("failed to initialize a managed cluster client: %w", err)
 	}
 
+	aodcGetter := utils.NewAddOnDeploymentConfigGetter(addonClient)
+
+	valueFuncs := []addonfactory.GetValuesFunc{
+		addonfactory.GetAddOnDeploymentConfigValues(
+			aodcGetter,
+			addonfactory.ToAddOnNodePlacementValues,
+			addonfactory.ToAddOnCustomizedVariableValues,
+		),
+		getValues,
+		addonfactory.GetValuesFromAddonAnnotation,
+		mandateValues,
+	}
+
+	imgFromEnv := os.Getenv("GOVERNANCE_POLICY_FRAMEWORK_ADDON_IMAGE")
+	if imgFromEnv != "" {
+		valueFuncs = append(valueFuncs, addonfactory.GetAgentImageValues(aodcGetter,
+			"global.imageOverrides.governance_policy_framework_addon", imgFromEnv))
+	}
+
 	return addonfactory.NewAgentAddonFactory(addonName, FS, "manifests/managedclusterchart").
 		WithConfigGVRs(utils.AddOnDeploymentConfigGVR).
-		WithGetValuesFuncs(
-			addonfactory.GetAddOnDeploymentConfigValues(
-				addonfactory.NewAddOnDeploymentConfigGetter(addonClient),
-				addonfactory.ToAddOnNodePlacementValues,
-				addonfactory.ToAddOnCustomizedVariableValues,
-			),
-			getValues,
-			addonfactory.GetValuesFromAddonAnnotation,
-			mandateValues,
-			mandateImageFromEnv,
-		).
+		WithGetValuesFuncs(valueFuncs...).
 		WithManagedClusterClient(clusterClient).
 		WithAgentRegistrationOption(registrationOption).
-		WithAgentInstallNamespace(
-			policyaddon.
-				CommonAgentInstallNamespaceFromDeploymentConfigFunc(utils.NewAddOnDeploymentConfigGetter(addonClient)),
-		).
+		WithAgentInstallNamespace(policyaddon.CommonAgentInstallNamespaceFromDeploymentConfigFunc(aodcGetter)).
 		WithScheme(policyaddon.Scheme).
 		WithAgentHostedModeEnabledOption().
 		BuildHelmAgentAddon()
@@ -270,36 +276,4 @@ func GetAndAddAgent(
 	ctx context.Context, mgr addonmanager.AddonManager, controllerContext *controllercmd.ControllerContext,
 ) error {
 	return policyaddon.GetAndAddAgent(ctx, mgr, addonName, controllerContext, GetAgentAddon)
-}
-
-// mandateImageFromEnv ensures that if the environment variable for an image is
-// set to a non-empty value, that value is used in the chart.
-func mandateImageFromEnv(
-	_ *clusterv1.ManagedCluster,
-	_ *addonapiv1alpha1.ManagedClusterAddOn,
-) (addonfactory.Values, error) {
-	values := addonfactory.Values{}
-
-	fwAddonImg := os.Getenv("GOVERNANCE_POLICY_FRAMEWORK_ADDON_IMAGE")
-	rbacImg := os.Getenv("KUBE_RBAC_PROXY_IMAGE")
-
-	if fwAddonImg == "" && rbacImg == "" {
-		return values, nil
-	}
-
-	overrides := make(map[string]any)
-
-	if fwAddonImg != "" {
-		overrides["governance_policy_framework_addon"] = fwAddonImg
-	}
-
-	if rbacImg != "" {
-		overrides["kube_rbac_proxy"] = rbacImg
-	}
-
-	values["global"] = map[string]any{
-		"imageOverrides": overrides,
-	}
-
-	return values, nil
 }
