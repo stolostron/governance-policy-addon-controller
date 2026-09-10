@@ -20,8 +20,10 @@ import (
 	"k8s.io/client-go/dynamic"
 )
 
+var testCtx = context.Background()
+
 // Kubectl executes kubectl commands
-func Kubectl(args ...string) string {
+func Kubectl(ctx context.Context, args ...string) string {
 	// Inject the kubeconfig to ensure we're pointing to the hub if none is provided
 	skipKubeconfig := false
 
@@ -37,7 +39,7 @@ func Kubectl(args ...string) string {
 		args = append(args, "--kubeconfig="+kubeconfigFilename+"1_e2e")
 	}
 
-	cmd := exec.Command("kubectl", args...)
+	cmd := exec.CommandContext(ctx, "kubectl", args...)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -74,13 +76,16 @@ func GetWithTimeout(
 	Eventually(func() error {
 		var err error
 		namespace := client.Resource(gvr).Namespace(namespace)
+
 		obj, err = namespace.Get(ctx, name, metav1.GetOptions{})
 		if wantFound && err != nil {
 			return err
 		}
+
 		if !wantFound && err == nil {
 			return errs.New("expected to return IsNotFound error")
 		}
+
 		if !wantFound && err != nil && !errors.IsNotFound(err) {
 			return err
 		}
@@ -115,13 +120,16 @@ func GetWithTimeoutClusterResource(
 	Eventually(func() error {
 		var err error
 		res := client.Resource(gvr)
+
 		obj, err = res.Get(ctx, name, metav1.GetOptions{})
 		if wantFound && err != nil {
 			return err
 		}
+
 		if !wantFound && err == nil {
 			return errs.New("expected to return IsNotFound error")
 		}
+
 		if !wantFound && err != nil && !errors.IsNotFound(err) {
 			return err
 		}
@@ -181,7 +189,7 @@ func getAddonStatus(addon *unstructured.Unstructured) bool {
 	}
 
 	for _, item := range conditions {
-		if condition, ok := item.(map[string]interface{}); !ok {
+		if condition, ok := item.(map[string]any); !ok {
 			panic(fmt.Errorf("failed to parse .status.condition[]: %+v", item))
 		} else if condition["type"] == "Available" {
 			return condition["status"] == "True"
@@ -200,7 +208,8 @@ func debugCollection(podSelector string) {
 
 	By("Recording debug logs")
 
-	output := "===\n"
+	var output strings.Builder
+	output.WriteString("===\n")
 
 	for i, cluster := range managedClusterList {
 		targetKubeconfig := fmt.Sprintf("--kubeconfig=%s%d_e2e", kubeconfigFilename, i+1)
@@ -216,31 +225,33 @@ func debugCollection(podSelector string) {
 		for _, namespace := range clusterNs {
 			for _, suffix := range namespaceSuffix {
 				namespace += suffix
-				output += fmt.Sprintf("Cluster %s: All objects in namespace %s:\n", targetCluster, namespace)
-				output += Kubectl("get", "all", "-n", namespace, targetKubeconfig)
-				output += "===\n"
-				output += fmt.Sprintf(
-					"Cluster %s: Pod logs for label %s in namespace %s:\n",
+				fmt.Fprintf(&output, "Cluster %s: All objects in namespace %s:\n", targetCluster, namespace)
+				output.WriteString(Kubectl(testCtx, "get", "all", "-n", namespace, targetKubeconfig))
+				output.WriteString("===\n")
+				fmt.Fprintf(&output, "Cluster %s: Pod logs for label %s in namespace %s:\n",
 					targetCluster, podSelector, namespace,
 				)
-				output += Kubectl("describe", "pod", "-n", namespace, "-l", podSelector, targetKubeconfig)
-				output += Kubectl("logs", "-n", namespace, "-l", podSelector, "--ignore-errors", targetKubeconfig)
-				output += "===\n"
+				output.WriteString(Kubectl(testCtx, "describe", "pod", "-n", namespace,
+					"-l", podSelector, targetKubeconfig))
+				output.WriteString(Kubectl(testCtx,
+					"logs", "-n", namespace, "-l", podSelector, "--ignore-errors", targetKubeconfig,
+				))
+				output.WriteString("===\n")
 			}
 		}
 
-		output += fmt.Sprintf("Cluster %s: All objects in namespace %s:\n", targetCluster, addonNamespace)
-		output += Kubectl("get", "all", "-n", addonNamespace, targetKubeconfig)
-		output += "===\n"
-		output += fmt.Sprintf("Cluster %s: Pod logs for label %s in namespace %s for cluster %s:\n",
+		fmt.Fprintf(&output, "Cluster %s: All objects in namespace %s:\n", targetCluster, addonNamespace)
+		output.WriteString(Kubectl(testCtx, "get", "all", "-n", addonNamespace, targetKubeconfig))
+		output.WriteString("===\n")
+		fmt.Fprintf(&output, "Cluster %s: Pod logs for label %s in namespace %s for cluster %s:\n",
 			targetCluster, podSelector, addonNamespace, cluster.clusterName)
-		output += Kubectl(
+		output.WriteString(Kubectl(testCtx,
 			"describe", "pod", "-n", addonNamespace, "-l", podSelector, targetKubeconfig,
-		)
-		output += Kubectl(
+		))
+		output.WriteString(Kubectl(testCtx,
 			"logs", "-n", addonNamespace, "-l", podSelector, "--ignore-errors", targetKubeconfig,
-		)
+		))
 	}
 
-	GinkgoWriter.Print(output)
+	GinkgoWriter.Print(output.String())
 }
