@@ -124,6 +124,7 @@ func main() {
 	klog.SetLogger(zapr.NewLogger(klogZap).WithName("klog"))
 
 	logs.InitLogs()
+
 	defer logs.FlushLogs()
 
 	cmd := &cobra.Command{
@@ -133,6 +134,7 @@ func main() {
 			if err := cmd.Help(); err != nil {
 				fmt.Fprintf(os.Stderr, "%v\n", err)
 			}
+
 			os.Exit(1)
 		},
 	}
@@ -181,11 +183,7 @@ func runController(ctx context.Context, controllerContext *controllercmd.Control
 		}
 	}
 
-	wg.Add(1)
-
-	go func() {
-		defer wg.Done()
-
+	wg.Go(func() {
 		err = mgr.Start(ctx)
 		if err != nil {
 			log.Error(err, "problem starting manager")
@@ -194,7 +192,7 @@ func runController(ctx context.Context, controllerContext *controllercmd.Control
 
 		// mgr.Start is not blocking so wait on the context to finish
 		<-ctx.Done()
-	}()
+	})
 
 	wg.Wait()
 

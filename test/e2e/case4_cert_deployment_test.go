@@ -35,7 +35,7 @@ func verifyCertPolicyDeployment(
 	)
 	Expect(deploy).NotTo(BeNil())
 
-	Eventually(func() []interface{} {
+	Eventually(func() []any {
 		deploy = GetWithTimeout(
 			ctx, client, gvrDeployment, case4DeploymentName, namespace, true, 30,
 		)
@@ -44,12 +44,13 @@ func verifyCertPolicyDeployment(
 		return containers
 	}, 60, 1).Should(HaveLen(1))
 
-	if startupProbeInCluster(clusterNum) {
+	if startupProbeInCluster(ctx, clusterNum) {
 		By(logPrefix + "verifying all replicas in cert-policy-controller deployment are available")
 		Eventually(func() bool {
 			deploy = GetWithTimeout(
 				ctx, client, gvrDeployment, case4DeploymentName, namespace, true, 30,
 			)
+
 			replicas, found, err := unstructured.NestedInt64(deploy.Object, "status", "replicas")
 			if !found || err != nil {
 				return false
@@ -92,19 +93,19 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 		}
 
 		By("Restoring the default cert-policy-controller ClusterManagementAddon on the hub cluster")
-		Kubectl("apply", "-f", case4ClusterManagementAddOnCRDefault)
+		kubectl("apply", "-f", case4ClusterManagementAddOnCRDefault)
 	})
 
 	It("should create the default cert-policy-controller deployment on the managed cluster", func(ctx SpecContext) {
 		for i, cluster := range managedClusterList {
 			logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
 			By(logPrefix + "deploying the default cert-policy-controller managedclusteraddon")
-			Kubectl("apply", "-n", cluster.clusterName, "-f", case4ManagedClusterAddOnCR)
+			kubectl("apply", "-n", cluster.clusterName, "-f", case4ManagedClusterAddOnCR)
 
 			verifyCertPolicyDeployment(ctx, logPrefix, cluster.clusterClient, cluster.clusterName, addonNamespace, i)
 
 			By(logPrefix + "removing the cert-policy-controller deployment when the ManagedClusterAddOn CR is removed")
-			Kubectl("delete", "-n", cluster.clusterName, "-f", case4ManagedClusterAddOnCR)
+			kubectl("delete", "-n", cluster.clusterName, "-f", case4ManagedClusterAddOnCR)
 			deploy := GetWithTimeout(
 				ctx, cluster.clusterClient, gvrDeployment, case4DeploymentName, addonNamespace, false, 30,
 			)
@@ -115,19 +116,20 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 	It("should create a cert-policy-controller deployment with node selector on the managed cluster",
 		func(ctx SpecContext) {
 			By("Creating the AddOnDeploymentConfig")
-			Kubectl("apply", "-f", addOnDeploymentConfigCR)
+			kubectl("apply", "-f", addOnDeploymentConfigCR)
 			By("Applying the cert-policy-controller ClusterManagementAddOn to use the AddOnDeploymentConfig")
-			Kubectl("apply", "-f", case4ClusterManagementAddOnCR)
+			kubectl("apply", "-f", case4ClusterManagementAddOnCR)
 
 			for i, cluster := range managedClusterList {
 				logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
 				By(logPrefix + "deploying the default cert-policy-controller managedclusteraddon")
-				Kubectl("apply", "-n", cluster.clusterName, "-f", case4ManagedClusterAddOnCR)
+				kubectl("apply", "-n", cluster.clusterName, "-f", case4ManagedClusterAddOnCR)
 
 				verifyCertPolicyDeployment(
 					ctx, logPrefix, cluster.clusterClient, cluster.clusterName, addonNamespace, i)
 
 				By(logPrefix + "verifying the nodeSelector")
+
 				deploy := GetWithTimeout(
 					ctx, cluster.clusterClient, gvrDeployment, case4DeploymentName, addonNamespace, true, 30,
 				)
@@ -138,9 +140,11 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 				Expect(nodeSelector).To(Equal(map[string]string{"kubernetes.io/os": "linux"}))
 
 				By(logPrefix + "verifying the tolerations")
+
 				tolerations, _, _ := unstructured.NestedSlice(deploy.Object, "spec", "template", "spec", "tolerations")
 				Expect(tolerations).To(HaveLen(1))
-				expected := map[string]interface{}{
+
+				expected := map[string]any{
 					"key":      "dedicated",
 					"operator": "Equal",
 					"value":    "something-else",
@@ -150,7 +154,7 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 
 				By(logPrefix +
 					"removing the cert-policy-controller deployment when the ManagedClusterAddOn CR is removed")
-				Kubectl("delete", "-n", cluster.clusterName, "-f", case4ManagedClusterAddOnCR)
+				kubectl("delete", "-n", cluster.clusterName, "-f", case4ManagedClusterAddOnCR)
 				deploy = GetWithTimeout(
 					ctx, cluster.clusterClient, gvrDeployment, case4DeploymentName, addonNamespace, false, 30,
 				)
@@ -158,42 +162,42 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 			}
 
 			By("Deleting the AddOnDeploymentConfig")
-			Kubectl("delete", "-f", addOnDeploymentConfigCR)
+			kubectl("delete", "-f", addOnDeploymentConfigCR)
 			By("Restoring the cert-policy-controller ClusterManagementAddOn")
-			Kubectl("apply", "-f", case4ClusterManagementAddOnCRDefault)
+			kubectl("apply", "-f", case4ClusterManagementAddOnCRDefault)
 		})
 
 	It("should create a cert-policy-controller deployment with resource requirements on the managed cluster",
 		func(ctx SpecContext) {
-			deploymentConfigTests := map[string]map[string]interface{}{
+			deploymentConfigTests := map[string]map[string]any{
 				"../resources/addondeploymentconfig_empty.yaml": {
-					"requests": map[string]interface{}{"memory": "150Mi"},
-					"limits":   map[string]interface{}{"memory": "300Mi"},
+					"requests": map[string]any{"memory": "150Mi"},
+					"limits":   map[string]any{"memory": "300Mi"},
 				},
 				"../resources/addondeploymentconfig_resourceRequirements_individual.yaml": {
-					"requests": map[string]interface{}{"memory": "60Mi"},
-					"limits":   map[string]interface{}{"memory": "120Mi"},
+					"requests": map[string]any{"memory": "60Mi"},
+					"limits":   map[string]any{"memory": "120Mi"},
 				},
 				"../resources/addondeploymentconfig_resourceRequirements_reduced.yaml": {
-					"requests": map[string]interface{}{"memory": "32Mi"},
-					"limits":   map[string]interface{}{"memory": "128Mi"},
+					"requests": map[string]any{"memory": "32Mi"},
+					"limits":   map[string]any{"memory": "128Mi"},
 				},
 				"../resources/addondeploymentconfig_resourceRequirements_universal.yaml": {
-					"requests": map[string]interface{}{"memory": "512Mi"},
-					"limits":   map[string]interface{}{"memory": "1Gi"},
+					"requests": map[string]any{"memory": "512Mi"},
+					"limits":   map[string]any{"memory": "1Gi"},
 				},
 			}
 
 			for configFile, expected := range deploymentConfigTests {
 				By("Creating the AddOnDeploymentConfig")
-				Kubectl("apply", "-f", configFile)
+				kubectl("apply", "-f", configFile)
 				By("Applying the cert-policy-controller ClusterManagementAddOn to use the AddOnDeploymentConfig")
-				Kubectl("apply", "-f", case4ClusterManagementAddOnCR)
+				kubectl("apply", "-f", case4ClusterManagementAddOnCR)
 
 				for i, cluster := range managedClusterList {
 					logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
 					By(logPrefix + "deploying the default cert-policy-controller managedclusteraddon")
-					Kubectl("apply", "-n", cluster.clusterName, "-f", case4ManagedClusterAddOnCR)
+					kubectl("apply", "-n", cluster.clusterName, "-f", case4ManagedClusterAddOnCR)
 
 					verifyCertPolicyDeployment(
 						ctx, logPrefix, cluster.clusterClient, cluster.clusterName, addonNamespace, i)
@@ -208,8 +212,9 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 							deploy.Object, "spec", "template", "spec", "containers")
 						g.Expect(err).NotTo(HaveOccurred())
 						g.Expect(containerSlice).To(HaveLen(1))
-						container, ok := containerSlice[0].(map[string]interface{})
+						container, ok := containerSlice[0].(map[string]any)
 						g.Expect(ok).To(BeTrue(), "Deployment container should be a map[string]interface{}")
+
 						resources, _, _ := unstructured.NestedMap(container, "resources")
 						g.Expect(resources).To(Equal(expected))
 					}, 30, 1).Should(Succeed())
@@ -220,7 +225,7 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 				logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
 				By(logPrefix + "removing the cert-policy-controller " +
 					"deployment when the ManagedClusterAddOn CR is removed")
-				Kubectl("delete", "-n", cluster.clusterName, "-f", case4ManagedClusterAddOnCR, "--timeout=90s")
+				kubectl("delete", "-n", cluster.clusterName, "-f", case4ManagedClusterAddOnCR, "--timeout=90s")
 				deploy := GetWithTimeout(
 					ctx, cluster.clusterClient, gvrDeployment, case4DeploymentName, addonNamespace, false, 30,
 				)
@@ -228,9 +233,9 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 			}
 
 			By("Deleting the AddOnDeploymentConfig")
-			Kubectl("delete", "-f", addOnDeploymentConfigCR, "--timeout=15s")
+			kubectl("delete", "-f", addOnDeploymentConfigCR, "--timeout=15s")
 			By("Restoring the cert-policy-controller ClusterManagementAddOn")
-			Kubectl("apply", "-f", case4ClusterManagementAddOnCRDefault)
+			kubectl("apply", "-f", case4ClusterManagementAddOnCRDefault)
 		})
 
 	It("should create the default cert-policy-controller deployment in hosted mode",
@@ -264,6 +269,7 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 
 				By(logPrefix +
 					"removing the cert-policy-controller deployment when the ManagedClusterAddOn CR is removed")
+
 				err := hubClient.Resource(gvrSecret).Namespace(installNamespace).Delete(
 					context.TODO(), "cert-policy-controller-managed-kubeconfig", metav1.DeleteOptions{},
 				)
@@ -287,9 +293,9 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 	It("should create the default cert-policy-controller deployment in hosted mode in klusterlet agent namespace",
 		Label("hosted-mode"), func(ctx SpecContext) {
 			By("Creating the AddOnDeploymentConfig")
-			Kubectl("apply", "-f", addOnDeploymentConfigWithManagedKubeconfigCR)
+			kubectl("apply", "-f", addOnDeploymentConfigWithManagedKubeconfigCR)
 			By("Applying the cert-policy-controller ClusterManagementAddOn to use the AddOnDeploymentConfig")
-			Kubectl("apply", "-f", case4ClusterManagementAddOnCR)
+			kubectl("apply", "-f", case4ClusterManagementAddOnCR)
 
 			for i, cluster := range managedClusterList[1:] {
 				Expect(cluster.clusterType).To(Equal("managed"))
@@ -320,6 +326,7 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 				defer deleteCancel()
 
 				By(logPrefix + "Removing the ManagedClusterAddOn CR")
+
 				err := clientDynamic.Resource(gvrManagedClusterAddOn).Namespace(cluster.clusterName).Delete(
 					deleteCtx, case4ManagedClusterAddOnName, metav1.DeleteOptions{},
 				)
@@ -334,6 +341,7 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 				Expect(deploy).To(BeNil())
 
 				By(logPrefix + "Verifying install namespace is not removed when the ManagedClusterAddOn CR is removed")
+
 				namespace := GetWithTimeout(ctx, hubClient, gvrNamespace, installNamespace, "", true, 30)
 				Expect(namespace).NotTo(BeNil())
 
@@ -341,6 +349,7 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 				defer cancelSec()
 
 				By(logPrefix + "cleaning up  the hosting cluster secret")
+
 				err = hubClient.Resource(gvrSecret).Namespace(installNamespace).Delete(
 					ctxSec, "external-managed-kubeconfig", metav1.DeleteOptions{},
 				)
@@ -350,6 +359,7 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 				defer cancelNS()
 
 				By(logPrefix + "Cleaning up the install namespace")
+
 				err = hubClient.Resource(gvrNamespace).Delete(
 					ctxNS, installNamespace, metav1.DeleteOptions{},
 				)
@@ -358,10 +368,11 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 				namespace = GetWithTimeout(ctx, hubClient, gvrNamespace, installNamespace, "", false, 30)
 				Expect(namespace).To(BeNil())
 			}
+
 			By("Deleting the AddOnDeploymentConfig")
-			Kubectl("delete", "-f", addOnDeploymentConfigWithManagedKubeconfigCR)
+			kubectl("delete", "-f", addOnDeploymentConfigWithManagedKubeconfigCR)
 			By("Restoring the cert-policy-controller ClusterManagementAddOn")
-			Kubectl("apply", "-f", case4ClusterManagementAddOnCRDefault)
+			kubectl("apply", "-f", case4ClusterManagementAddOnCRDefault)
 		})
 
 	It("should create a cert-policy-controller deployment with custom logging levels using an annotation",
@@ -369,7 +380,7 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 			for _, cluster := range managedClusterList {
 				logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
 				By(logPrefix + "deploying the default cert-policy-controller managedclusteraddon")
-				Kubectl("apply", "-n", cluster.clusterName, "-f", case4ManagedClusterAddOnCR)
+				kubectl("apply", "-n", cluster.clusterName, "-f", case4ManagedClusterAddOnCR)
 				deploy := GetWithTimeout(
 					ctx, cluster.clusterClient, gvrDeployment, case4DeploymentName, addonNamespace, true, 30,
 				)
@@ -385,7 +396,7 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 				}, 240, 1).Should(BeTrue())
 
 				By(logPrefix + "annotating the managedclusteraddon with the " + loggingLevelAnnotation + " annotation")
-				Kubectl("annotate", "-n", cluster.clusterName, "-f", case4ManagedClusterAddOnCR, loggingLevelAnnotation)
+				kubectl("annotate", "-n", cluster.clusterName, "-f", case4ManagedClusterAddOnCR, loggingLevelAnnotation)
 
 				By(logPrefix + "verifying a new cert-policy-controller pod is deployed with the logging level")
 				Eventually(func(g Gomega) {
@@ -394,17 +405,21 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 					}
 					pods := ListWithTimeoutByNamespace(
 						ctx, cluster.clusterClient, gvrPod, opts, addonNamespace, 1, true, 60)
-					phase := pods.Items[0].Object["status"].(map[string]interface{})["phase"]
+					phase := pods.Items[0].Object["status"].(map[string]any)["phase"]
 
 					g.Expect(phase.(string)).To(Equal("Running"))
+
 					containerList, _, err := unstructured.NestedSlice(pods.Items[0].Object, "spec", "containers")
 					g.Expect(err).ToNot(HaveOccurred())
+
 					for _, container := range containerList {
-						containerObj, ok := container.(map[string]interface{})
+						containerObj, ok := container.(map[string]any)
 						g.Expect(ok).To(BeTrue())
+
 						if g.Expect(containerObj).To(HaveKey("name")) && containerObj["name"] != case4DeploymentName {
 							continue
 						}
+
 						if g.Expect(containerObj).To(HaveKey("args")) {
 							args := containerObj["args"]
 							g.Expect(args).To(ContainElement("--log-encoder=console"))
@@ -417,7 +432,7 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 
 				By(logPrefix + "removing the cert-policy-controller deployment " +
 					"when the ManagedClusterAddOn CR is removed")
-				Kubectl("delete", "-n", cluster.clusterName, "-f", case4ManagedClusterAddOnCR)
+				kubectl("delete", "-n", cluster.clusterName, "-f", case4ManagedClusterAddOnCR)
 				deploy = GetWithTimeout(
 					ctx, cluster.clusterClient, gvrDeployment, case4DeploymentName, addonNamespace, false, 30,
 				)
@@ -428,14 +443,14 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 	It("should create a cert-policy-controller deployment with customizations from AddOnDeploymentConfig",
 		func(ctx SpecContext) {
 			By("Creating the AddOnDeploymentConfig")
-			Kubectl("apply", "-f", addOnDeploymentConfigWithCustomVarsCR)
+			kubectl("apply", "-f", addOnDeploymentConfigWithCustomVarsCR)
 			By("Applying the cert-policy-controller ClusterManagementAddOn to use the AddOnDeploymentConfig")
-			Kubectl("apply", "-f", case4CMAOCRCustomizedVars)
+			kubectl("apply", "-f", case4CMAOCRCustomizedVars)
 
 			for _, cluster := range managedClusterList {
 				logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
 				By(logPrefix + "deploying the default cert-policy-controller managedclusteraddon")
-				Kubectl("apply", "-n", cluster.clusterName, "-f", case4ManagedClusterAddOnCR)
+				kubectl("apply", "-n", cluster.clusterName, "-f", case4ManagedClusterAddOnCR)
 				deploy := GetWithTimeout(
 					ctx, cluster.clusterClient, gvrDeployment, case4DeploymentName, addonNamespace, true, 30,
 				)
@@ -457,17 +472,21 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 					}
 					pods := ListWithTimeoutByNamespace(
 						ctx, cluster.clusterClient, gvrPod, opts, addonNamespace, 1, true, 60)
-					phase := pods.Items[0].Object["status"].(map[string]interface{})["phase"]
+					phase := pods.Items[0].Object["status"].(map[string]any)["phase"]
 
 					g.Expect(phase.(string)).To(Equal("Running"))
+
 					containerList, _, err := unstructured.NestedSlice(pods.Items[0].Object, "spec", "containers")
 					g.Expect(err).ToNot(HaveOccurred())
+
 					for _, container := range containerList {
-						containerObj, ok := container.(map[string]interface{})
+						containerObj, ok := container.(map[string]any)
 						g.Expect(ok).To(BeTrue())
+
 						if g.Expect(containerObj).To(HaveKey("name")) && containerObj["name"] != case4DeploymentName {
 							continue
 						}
+
 						if g.Expect(containerObj).To(HaveKey("args")) {
 							args := containerObj["args"]
 							g.Expect(args).To(ContainElement("--log-encoder=json"))
@@ -480,7 +499,7 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 
 				By(logPrefix + "removing the cert-policy-controller deployment " +
 					"when the ManagedClusterAddOn CR is removed")
-				Kubectl("delete", "-n", cluster.clusterName, "-f", case4ManagedClusterAddOnCR)
+				kubectl("delete", "-n", cluster.clusterName, "-f", case4ManagedClusterAddOnCR)
 				deploy = GetWithTimeout(
 					ctx, cluster.clusterClient, gvrDeployment, case4DeploymentName, addonNamespace, false, 30,
 				)
@@ -497,7 +516,7 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 				logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
 
 				By(logPrefix + "setting the product.open-cluster-management.io ClusterClaim to OpenShift")
-				Kubectl(
+				kubectl(
 					"apply",
 					"-f",
 					case4OpenShiftClusterClaim,
@@ -515,8 +534,9 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 					g.Expect(clusterClaims).ToNot(BeEmpty())
 
 					var claimValue string
+
 					for _, clusterClaim := range clusterClaims {
-						clusterClaim := clusterClaim.(map[string]interface{})
+						clusterClaim := clusterClaim.(map[string]any)
 						if clusterClaim["name"].(string) == "product.open-cluster-management.io" {
 							claimValue = clusterClaim["value"].(string)
 
@@ -530,7 +550,7 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 				// The status doesn't need to be checked on the deployment because the deployment requires a cert that
 				// is auto-generated by OpenShift, which won't be present.
 				By(logPrefix + "deploying the default cert-policy-controller managedclusteraddon")
-				Kubectl("apply", "-n", cluster.clusterName, "-f", case4ManagedClusterAddOnCR)
+				kubectl("apply", "-n", cluster.clusterName, "-f", case4ManagedClusterAddOnCR)
 				deploy := GetWithTimeout(
 					ctx, cluster.clusterClient, gvrDeployment, case4DeploymentName, addonNamespace, true, 30,
 				)
@@ -545,7 +565,7 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 
 					endpoints, _, _ := unstructured.NestedSlice(sm.Object, "spec", "endpoints")
 					g.Expect(endpoints).ToNot(BeEmpty())
-					g.Expect(endpoints[0].(map[string]interface{})["scheme"].(string)).To(Equal("https"))
+					g.Expect(endpoints[0].(map[string]any)["scheme"].(string)).To(Equal("https"))
 				}, 120, 3).Should(Succeed())
 
 				By(logPrefix + "verifying that the metrics Service exists")
@@ -557,7 +577,7 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 
 					ports, _, _ := unstructured.NestedSlice(service.Object, "spec", "ports")
 					g.Expect(ports).To(HaveLen(1))
-					port := ports[0].(map[string]interface{})
+					port := ports[0].(map[string]any)
 					g.Expect(port["port"].(int64)).To(Equal(int64(8443)))
 					g.Expect(port["targetPort"].(int64)).To(Equal(int64(8443)))
 				}, 120, 3).Should(Succeed())
@@ -573,7 +593,7 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 				}, 30, 3).Should(Succeed())
 
 				By(logPrefix + "cleaning up")
-				Kubectl(
+				kubectl(
 					"delete",
 					"-f",
 					case4OpenShiftClusterClaim,
@@ -581,7 +601,7 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 					"--timeout=15s",
 				)
 
-				Kubectl("delete", "-n", cluster.clusterName, "-f", case4ManagedClusterAddOnCR, "--timeout=90s")
+				kubectl("delete", "-n", cluster.clusterName, "-f", case4ManagedClusterAddOnCR, "--timeout=90s")
 				deploy = GetWithTimeout(
 					ctx, cluster.clusterClient, gvrDeployment, case4DeploymentName, addonNamespace, false, 30,
 				)
