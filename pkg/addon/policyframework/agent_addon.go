@@ -261,6 +261,12 @@ func GetAgentAddon(ctx context.Context, controllerContext *controllercmd.Control
 			"global.imageOverrides.governance_policy_framework_addon", imgFromEnv))
 	}
 
+	proxyImgFromEnv := os.Getenv("KUBE_RBAC_PROXY_IMAGE")
+	if proxyImgFromEnv != "" {
+		valueFuncs = append(valueFuncs, addonfactory.GetAgentImageValues(aodcGetter,
+			"global.imageOverrides.kube_rbac_proxy", proxyImgFromEnv))
+	}
+
 	return addonfactory.NewAgentAddonFactory(addonName, FS, "manifests/managedclusterchart").
 		WithConfigGVRs(utils.AddOnDeploymentConfigGVR).
 		WithGetValuesFuncs(valueFuncs...).
