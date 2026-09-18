@@ -18,21 +18,24 @@ var _ = Describe("Test config-policy-controller deployment with standalone templ
 	BeforeAll(func() {
 		By("Deploying the default config-policy-controller and governance-standalone-hub-templating " +
 			"ClusterManagementAddons to the hub cluster")
-		Kubectl("apply", "-f", case2ClusterManagementAddOnCRDefault)
-		Kubectl("apply", "-f", case3ClusterManagementAddOnDefaultCR)
+		Kubectl(testCtx, "apply", "-f", case2ClusterManagementAddOnCRDefault)
+		Kubectl(testCtx, "apply", "-f", case3ClusterManagementAddOnDefaultCR)
 	})
 
 	AfterAll(func() {
 		By("Deleting the default config-policy-controller and governance-standalone-hub-templating " +
 			"ClusterManagementAddons from the hub cluster")
-		Kubectl("delete", "-f", case2ClusterManagementAddOnCRDefault)
-		Kubectl("delete", "-f", case3ClusterManagementAddOnDefaultCR)
+		Kubectl(testCtx, "delete", "-f", case2ClusterManagementAddOnCRDefault)
+		Kubectl(testCtx, "delete", "-f", case3ClusterManagementAddOnDefaultCR)
 
 		By("Deleting the default config-policy-controller and governance-standalone-hub-templating " +
 			"ManagedClusterAddons on each cluster")
+
 		for _, cluster := range managedClusterList {
-			Kubectl("delete", "-n", cluster.clusterName, "-f", case2ManagedClusterAddOnCR, "--ignore-not-found=true")
-			Kubectl("delete", "-n", cluster.clusterName, "-f", case3ManagedClusterAddOnCR, "--ignore-not-found=true")
+			Kubectl(testCtx, "delete", "-n", cluster.clusterName,
+				"-f", case2ManagedClusterAddOnCR, "--ignore-not-found=true")
+			Kubectl(testCtx, "delete", "-n", cluster.clusterName,
+				"-f", case3ManagedClusterAddOnCR, "--ignore-not-found=true")
 		}
 	})
 
@@ -41,7 +44,7 @@ var _ = Describe("Test config-policy-controller deployment with standalone templ
 			for _, cluster := range managedClusterList {
 				logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
 				By(logPrefix + "deploying the default config-policy-controller managedclusteraddon")
-				Kubectl("apply", "-n", cluster.clusterName, "-f", case2ManagedClusterAddOnCR)
+				Kubectl(testCtx, "apply", "-n", cluster.clusterName, "-f", case2ManagedClusterAddOnCR)
 
 				By(logPrefix + "verifying the standalone-hub-templates arg is not set")
 
@@ -72,7 +75,7 @@ var _ = Describe("Test config-policy-controller deployment with standalone templ
 		for _, cluster := range managedClusterList {
 			logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
 			By(logPrefix + "deploying the default governance-standalone-hub-templating managedclusteraddon")
-			Kubectl("apply", "-n", cluster.clusterName, "-f", case3ManagedClusterAddOnCR)
+			Kubectl(testCtx, "apply", "-n", cluster.clusterName, "-f", case3ManagedClusterAddOnCR)
 
 			By(logPrefix + "verifying the standalone-hub-templates arg is set")
 

@@ -68,6 +68,7 @@ func init() {
 }
 
 func NewRegistrationOption(
+	ctx context.Context,
 	controllerContext *controllercmd.ControllerContext,
 	addonName string,
 	agentPermissionFiles []string,
@@ -92,7 +93,7 @@ func NewRegistrationOption(
 			Group:       groups[groupIdx],
 		}
 
-		results := resourceapply.ApplyDirectly(context.Background(),
+		results := resourceapply.ApplyDirectly(ctx,
 			resourceapply.NewKubeClientHolder(kubeclient),
 			recorder,
 			resourceapply.NewResourceCache(),
@@ -197,7 +198,7 @@ func (pa *PolicyAgentAddon) Manifests(
 	return pa.AgentAddon.Manifests(cluster, addon)
 }
 
-// getLogLevel verifies the user-provided log level against Zap, returning 0 if the check fails.
+// GetLogLevel verifies the user-provided log level against Zap, returning 0 if the check fails.
 func GetLogLevel(component string, level string) int8 {
 	logDefault := int8(0)
 
