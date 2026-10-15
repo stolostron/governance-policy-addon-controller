@@ -15,6 +15,8 @@ spec:
       value: "15"
     - name: clientBurst
       value: "30"
+    - name: disableManagedClusterUIDFence
+      value: "true"
   registries:
     - mirror: "quay.io:443/open-cluster-management/governance-policy-framework-addon"
       source: "quay.io/open-cluster-management/governance-policy-framework-addon"
