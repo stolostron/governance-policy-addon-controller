@@ -5,6 +5,7 @@ import (
 	"embed"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -37,6 +38,7 @@ type policyFrameworkUserValues struct {
 
 	SyncPoliciesOnMulticlusterHub bool `json:"syncPoliciesOnMulticlusterHub,string,omitempty"`
 	OnMulticlusterHub             bool `json:"onMulticlusterHub,string,omitempty"`
+	DisableManagedClusterUIDFence bool `json:"disableManagedClusterUIDFence,string,omitempty"` //nolint:tagliatelle
 }
 
 var (
@@ -129,17 +131,41 @@ func getValuesFromCustomizedVariableValues(config addonapiv1beta1.AddOnDeploymen
 		log.Error(err, "error setting common addon values from customized variables")
 	}
 
-	variableToFuncMap := map[string]func(*policyFrameworkUserValues, string){}
+	variableToFuncMap := map[string]func(string) error{
+		"disableManagedClusterUIDFence": func(value string) error {
+			valBool, err := strconv.ParseBool(value)
+			if err != nil {
+				return err
+			}
+
+			userValues.DisableManagedClusterUIDFence = valBool
+
+			return nil
+		},
+	}
 
 	for key, value := range userValuesMap {
 		if fn, ok := variableToFuncMap[key]; ok {
-			fn(&userValues, value)
+			err := fn(value)
+			if err != nil {
+				log.Error(err, "error setting customized variable", "variable", key, "value", value)
+			}
 		} else {
 			log.Error(fmt.Errorf("unknown customized variable: %s", key), "unknown customized variable")
 		}
 	}
 
 	return addonfactory.JsonStructToValues(userValues)
+}
+
+func managedClusterUIDValues(cluster *clusterv1.ManagedCluster, _ *addonapiv1beta1.ManagedClusterAddOn) (
+	addonfactory.Values, error,
+) {
+	return addonfactory.Values{"managedClusterUID": string(cluster.GetUID())}, nil
+}
+
+func managedClusterUIDChanged(oldCluster, newCluster *clusterv1.ManagedCluster) bool {
+	return oldCluster.GetUID() != newCluster.GetUID()
 }
 
 func GetAgentAddon(ctx context.Context, controllerContext *controllercmd.ControllerContext) (agent.AgentAddon, error) {
@@ -175,6 +201,7 @@ func GetAgentAddon(ctx context.Context, controllerContext *controllercmd.Control
 			addonfactory.ToAddOnResourceRequirementsValues,
 			getValuesFromCustomizedVariableValues,
 		),
+		managedClusterUIDValues,
 		policyaddon.MandateValues,
 	}
 
@@ -187,6 +214,7 @@ func GetAgentAddon(ctx context.Context, controllerContext *controllercmd.Control
 	return addonfactory.NewAgentAddonFactory(addonName, FS, "manifests/managedclusterchart").
 		WithConfigGVRs(utils.AddOnDeploymentConfigGVR).
 		WithGetValuesFuncs(valueFuncs...).
+		WithAgentDeployTriggerClusterFilter(managedClusterUIDChanged).
 		WithManagedClusterClient(clusterClient).
 		WithAgentRegistrationOption(registrationOption).
 		WithAgentInstallNamespace(policyaddon.CommonAgentInstallNamespaceFromDeploymentConfigFunc(aodcGetter)).

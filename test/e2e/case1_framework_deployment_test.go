@@ -109,6 +109,12 @@ var _ = Describe("Test framework deployment", func() {
 				"--client-burst=45",
 			)
 
+			managedCluster, err := clientDynamic.Resource(gvrManagedCluster).Get(
+				ctx, cluster.clusterName, metav1.GetOptions{},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			checkArgs(ctx, cluster, "--managed-cluster-uid="+string(managedCluster.GetUID()))
+
 			By(logPrefix + "removing the framework deployment when the ManagedClusterAddOn CR is removed")
 			Kubectl("delete", "-n", cluster.clusterName, "-f", case1ManagedClusterAddOnCR, "--timeout=180s")
 			deploy := GetWithTimeout(
@@ -348,6 +354,7 @@ var _ = Describe("Test framework deployment", func() {
 				"--client-max-qps=15",
 				"--client-burst=30",
 			)
+			checkArgNotPresent(ctx, cluster, "--managed-cluster-uid=")
 
 			By(logPrefix + "verifying the " + ocmPolicyNs + " namespace exists in non-hosted mode")
 			ns := GetWithTimeout(
@@ -930,6 +937,18 @@ func checkContainersAndAvailabilityInNamespace(
 }
 
 func checkArgs(ctx context.Context, cluster managedClusterConfig, desiredArgs ...string) {
+	checkFrameworkArgs(ctx, cluster, func(g Gomega, argList []string) {
+		g.Expect(argList).To(ContainElements(desiredArgs))
+	})
+}
+
+func checkArgNotPresent(ctx context.Context, cluster managedClusterConfig, argPrefix string) {
+	checkFrameworkArgs(ctx, cluster, func(g Gomega, argList []string) {
+		g.Expect(argList).NotTo(ContainElement(HavePrefix(argPrefix)))
+	})
+}
+
+func checkFrameworkArgs(ctx context.Context, cluster managedClusterConfig, assertArgs func(Gomega, []string)) {
 	logPrefix := cluster.clusterType + " " + cluster.clusterName + ": "
 
 	client := cluster.clusterClient
@@ -940,7 +959,7 @@ func checkArgs(ctx context.Context, cluster managedClusterConfig, desiredArgs ..
 		namespace = "klusterlet-" + cluster.clusterName
 	}
 
-	By(logPrefix + "verifying one framework pod is running and has the desired args")
+	By(logPrefix + "verifying one framework pod is running and has the expected args")
 	Eventually(func(g Gomega) {
 		opts := metav1.ListOptions{
 			LabelSelector: case1PodSelector,
@@ -979,7 +998,7 @@ func checkArgs(ctx context.Context, cluster managedClusterConfig, desiredArgs ..
 				fmt.Sprintf("could not get container args; found=%v; err=%v", found, err))
 		}
 
-		g.Expect(argList).To(ContainElements(desiredArgs))
+		assertArgs(g, argList)
 	}, 120, 1).Should(Succeed())
 }
 
