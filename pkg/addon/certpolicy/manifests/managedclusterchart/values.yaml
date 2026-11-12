@@ -19,6 +19,7 @@ networkPolicies: true
 
 tlsMinVersion: ""
 tlsCipherSuites: ""
+tlsGroups: ""
 
 affinity: {}
 

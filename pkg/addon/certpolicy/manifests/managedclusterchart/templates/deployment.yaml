@@ -63,6 +63,9 @@ spec:
         {{- if ne .Values.tlsCipherSuites "" }}
         - --tls-cipher-suites={{ .Values.tlsCipherSuites }}
         {{- end }}
+        {{- if ne .Values.tlsGroups "" }}
+        - --tls-groups={{ .Values.tlsGroups }}
+        {{- end }}
         env:
         - name: WATCH_NAMESPACE
           {{- if eq .Values.installMode "Hosted" }}
