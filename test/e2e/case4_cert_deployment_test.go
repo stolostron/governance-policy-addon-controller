@@ -504,6 +504,7 @@ var _ = Describe("Test cert-policy-controller deployment", func() {
 							g.Expect(args).To(ContainElement("--tls-min-version=VersionTLS12"))
 							g.Expect(args).To(ContainElement(
 								"--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"))
+							g.Expect(args).To(ContainElement("--tls-groups=X25519"))
 						}
 					}
 				}, 180, 10).Should(Succeed())
